@@ -1,132 +1,143 @@
+const debug = require("debug")("rrdtool:proc");
+import child_process from "child_process";
+import { ConsolidationFunction, RrdToolCreateOptions, RrdtoolData, RrdtoolDatapoint, RrdtoolDefinition, RrdToolFetchOptions, RrdtoolInfo, RrdToolUpdateOptions } from "./types";
+import { parseInfo } from "./util";
 
-var debug = require('debug')('rrdtool:proc');
-var child_process = require('child_process');
+const exec = async (args: string[]): Promise<string> =>
+  new Promise((resolve, reject) => {
+    debug(["rrdtool"].concat(args).join(" "));
 
-function exec (args, cb) {
-  debug(['rrdtool'].concat(args).join(' '));
+    const stdout: any[] = [];
+    const stderr: any[] = [];
+    const p = child_process.spawn("rrdtool", args, { env: { LANG: "C" } });
 
-  var stdout = [];
-  var stderr = [];
-  var p = child_process.spawn('rrdtool', args, { env: {LANG: 'C'} });
+    p.stdout.on("data", chunk => stdout.push(chunk));
+    p.stderr.on("data", chunk => stderr.push(chunk));
 
-  p.stdout.on('data', function (chunk) {
-    stdout.push(chunk);
+    p.on("close", code => {
+      if (code !== 0) {
+        const str = Buffer.concat(stderr).toString();
+        const err = new Error(str.replace(/^ERROR: /, ""));
+
+        return reject(err);
+      }
+
+      return resolve(Buffer.concat(stdout).toString());
+    });
   });
 
-  p.stderr.on('data', function (chunk) {
-    stderr.push(chunk);
-  });
-
-  p.on('close', function (code) {
-
-    if (code !== 0) {
-      var str = Buffer.concat(stderr).toString();
-      var err = new Error(str.replace(/^ERROR: /, ''));
-
-      return cb(err);
-    }
-
-    cb(null, Buffer.concat(stdout).toString());
-  });
-
+interface InfoDS {
+  name: string;
+  type: string;
 }
 
-exports.create = function (file, opts, args, cb) {
+interface InfoRRA {
+  cf: string;
+}
 
-  var a = [];
+export interface Info {
+  ds: InfoDS[];
+  rra: InfoRRA[];
+}
 
-  if (opts.start) {
-    a.push('--start');
-    // rrdtool dosen't allow inserting a value onto
-    // the start date. Decrese it by one so we can do that.
-    a.push('' + (opts.start - 1));
-  }
+export type Data = Record<string, number>;
+export interface Datapoint {
+  ts: number;
+  values: Data;
+}
 
-  if (opts.step) {
-    a.push('--step');
-    a.push('' + opts.step);
-  }
+const create = async (
+  filename: string,
+  definitions: RrdtoolDefinition[],
+  o?: RrdToolCreateOptions,
+): Promise<void> => {
+  const opts = [];
 
-  if (opts.force !== true) {
-    a.push('--no-overwrite');
-  }
+  // rrdtool dosen't allow inserting a value onto
+  // the start date. Decrese it by one so we can do that.
+  if (o?.start) opts.push(`--start ${o.start - 1}`);
+  if (o?.step) opts.push(`--step ${o.step}`);
+  if (!o?.overwrite) opts.push("--no-overwrite");
+  if (o?.templateFile) opts.push(`--template ${o.templateFile}`);
+  if (o?.sourceFile) opts.push(`--source ${o.sourceFile}`);
 
-  exec(['create', file].concat(a).concat(args), function (err) {
-    cb(err);
-  });
+  exec(["create", filename, ...opts, ...definitions]);
 };
 
-exports.info = function (file, cb) {
-  exec(['info', file], function (err, out) {
-    if (err) { return cb(err); }
-
-    var info = { ds: [], rra: [] };
-
-    var reDs = /ds\[([a-zA-Z0-9_]+)\].type = "([A-Z]+)"/g;
-    var reRra = /rra\[([0-9]+)\].cf = "([A-Z]+)"/g;
-
-    out.replace(reDs, function (m0, m1, m2) {
-      info.ds.push({ name: m1, type: m2 });
-    });
-
-    out.replace(reRra, function (m0, m1, m2) {
-      info.rra.push({ cf: m2 });
-    });
-
-    cb(null, info);
-  });
+const dump = async (filename: string): Promise<string> => {
+  // XXX: output file and --header?
+  return exec(["dump", filename]);
 };
 
-exports.update = function (file, ts, values, cb) {
-
-  var template = [];
-  var cmd = [ts];
-
-  Object.keys(values).forEach(function (key) {
-    template.push(key);
-    cmd.push(values[key]);
-  });
-
-  exec(['update', file, '--template', template.join(':'), cmd.join(':')], function (err) {
-    cb(err);
-  });
-};
-
-exports.fetch = function (file, cf, start, stop, res, cb) {
-
-  var args = ['fetch', file, cf];
+const fetch = async (
+  filename: string,
+  cf: ConsolidationFunction,
+  o?: RrdToolFetchOptions
+): Promise<RrdtoolDatapoint[]> => {
+  const opts: string[] = [];
 
   // rrdtool counts timestamp very strange, hence the -1
-  args.push('--start', '' + (start - 1));
-  args.push('--end', '' + (stop - 1));
+  if (o?.start) opts.push(`--start ${o.start - 1}`);
+  if (o?.end) opts.push(`--end ${o.end - 1}`);
+  if (o?.resolution) opts.push(`--resolution ${o.resolution}`);
+  if (o?.alignStart) opts.push("--align-start");
 
-  if (res !== null) {
-    args.push('--resolution', '' + res);
-  }
+  const data = await exec(["fetch", filename, cf, ...opts]);
+  const rows = data.trim().split("\n");
+  const header = rows[0].trim().split(/ +/);
 
-  exec(args, function (err, data) {
-    if (err) { return cb(err); }
+  const parseRow = (row: string): RrdtoolDatapoint => {
+    const [t, d] = row.split(":");
 
-    function parseRow (str) {
-      var m = str.split(':');
+    return {
+      timestamp: Number(t),
+      values: d.trim().split(/ +/).reduce<Data>((p, c, i) => {
+        const n = Number(c);
+        if (!Number.isNaN(n)) {
+          p[header[i]] = n;
+        }
+        return p;
+      }, {}),
+    };
+  };
 
-      return {
-        time: Number(m[0]),
-        values: m[1].trim().split(/ +/).reduce(function (p, c, i) {
-          p[header[i]] = (c.trim() === 'nan' ? null : Number(c));
-          return p;
-        }, {})
-      };
-    }
-
-    var lines = data.trim().split('\n');
-    var header = lines[0].trim().split(/ +/);
-    var rows = lines.slice(2).map(parseRow);
-
-    cb(null, rows);
-  });
+  return rows.slice(2).map(parseRow);
 };
 
-exports.dump = function (file, cb) {
-  exec(['dump', file], cb);
+const info = async (filename: string): Promise<RrdtoolInfo<any>> => {
+  // XXX: --noflush?
+  const str = await exec(["info", filename]);
+  return parseInfo(str);
+};
+
+const last = async (filename: string): Promise<number> => {
+  return Number(await exec(["last", filename]));
+};
+
+// XXX: lastUpdate
+
+const update = async (filename: string, values: Partial<RrdtoolData>, o?: RrdToolUpdateOptions): Promise<void> => {
+  const template: string[] = [];
+  const data: (number | string)[] = [o?.timestamp || "N"]; // XXX: "N" if no timestamp?
+
+  for (const key of Object.keys(values)) {
+    const v = values[key]
+    if (v === undefined) continue;
+    data.push(v);
+    template.push(key);
+  }
+
+  const opts: string[] = ["--template", template.join(":")]
+  if (o?.skipPastUpdates) opts.push(`--skip-past-updates`);
+
+  exec([o?.verbose ? "updatev" : "update", filename, ...opts, data.join(":")]);
+};
+
+export default {
+  create,
+  dump,
+  fetch,
+  info,
+  last,
+  update,
 };

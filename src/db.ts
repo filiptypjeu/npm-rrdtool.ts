@@ -1,144 +1,119 @@
+import proc from "./proc";
 
-var proc = require('./proc');
-var util = require('./util');
+import async, { QueueObject } from "async";
+import EventEmitter from "events";
+import { ConsolidationFunction, RrdtoolData, RrdtoolDatapoint, RrdToolFetchOptions, RrdtoolInfo, RrdToolUpdateOptions } from "./types";
 
-var async = require('async');
-var assert = require('assert');
-var events = require('events');
-var EventEmitter = events.EventEmitter;
-
-function DB () {
-  this.info = null;
-  this.file = null;
-  this.queue = async.queue(this._worker.bind(this), 1);
-  this.queue.pause();
-  EventEmitter.call(this);
+enum M {
+  DUMP,
+  FETCH,
+  UPDATE,
 }
 
-DB.prototype = Object.create(EventEmitter.prototype);
+interface QBase<T> {
+  method: M;
+  cb: (err: Error | null, result: T | Promise<T>) => void;
+}
+interface QUpdate extends QBase<void> {
+  method: M.UPDATE;
+  values: Partial<RrdtoolData>;
+  options?: RrdToolUpdateOptions;
+}
+interface QFetch extends QBase<RrdtoolDatapoint[]> {
+  method: M.FETCH;
+  cf: ConsolidationFunction;
+  options?: RrdToolFetchOptions;
+}
+interface QDump extends QBase<string> {
+  method: M.DUMP;
+}
 
-DB.open = function (file) {
-  var db = new DB;
-  db._load(file);
+type Q = QUpdate | QFetch | QDump;
 
-  return db;
-};
+type Callback = (err?: Error | null) => void;
 
-DB.create = function (file, opts, args) {
+export class RrdtoolDatabase<D extends RrdtoolData> extends EventEmitter {
+  private info: RrdtoolInfo<keyof D & string> | undefined;
+  private queue: QueueObject<Q>;
+  private readonly errorCallback: Callback;
 
-  var db = new DB;
+  constructor(public readonly filename: string, errorCallback?: Callback) {
+    super();
+    this.errorCallback = errorCallback || (err => this.emit("error", err));
+    this.queue = async.queue(this._worker.bind(this), 1);
+    this.queue.pause();
+    this._load(filename);
+  }
 
-  proc.create(file, opts, args, function (err) {
-    if (err) { return db.emit('error', err); }
+  private async _load(filename: string) {
+    this.info = await proc.info(filename);
+    this.queue.resume();
+  }
 
-    db._load(file);
-  });
+  private _addToQueue(q: Q): void {
+    this.queue.push(q, this.errorCallback);
+  }
 
-  return db;
-};
+  private _callback<T>(resolve: (result: T) => void, reject: (reason: any) => void) {
+    return (err: Error | null, result: T) => {
+      if (err) reject(err);
+      resolve(result);
+    }
+  }
 
-DB.prototype._load = function (file) {
-  var self = this;
+  private _worker(q: Q) {
+    switch (q.method) {
+      case M.UPDATE: {
+        const ds = this.info?.ds || [];
+        const unknownKeys = Object.keys(q.values).filter(k => !ds.find(d => d.name === k));
 
-  proc.info(file, function (err, info) {
-    if (err) { return self.emit('error', err); }
+        if (unknownKeys.length > 0) {
+            return q.cb(new Error(`Unknown data source(s): ${unknownKeys.join(", ")}`));
+        }
 
-    self.file = file;
-    self.info = info;
-    self.queue.resume();
-  });
-
-};
-
-DB.prototype._worker = function (args, cb) {
-
-  switch (args[0]) {
-  case 'update':
-    var ts = args[1];
-    var values = args[2];
-    var ds = this.info.ds;
-
-    var unknown = Object.keys(values).map(function (name) {
-      var matching = ds.filter(function (ds) { return ds.name === name; });
-
-      return (matching.length === 1 ? null : name);
-    }).filter(Boolean);
-
-    if (unknown.length > 0) {
-      if (unknown.length === 1) {
-        return cb(new Error('Unknown data source: ' + unknown[0]));
-      } else {
-        return cb(new Error('Unknown data sources: ' + unknown.join(', ')));
+        q.cb(null, proc.update(this.filename, q.values, q.options));
+        break;
       }
+
+      case M.FETCH: {
+        q.cb(null, proc.fetch(this.filename, q.cf, q.options));
+        break;
+      }
+
+      case M.DUMP:
+        q.cb(null, proc.dump(this.filename));
+        break;
     }
+  }
 
-    proc.update(this.file, ts, values, cb);
-    break;
-  case 'fetch':
-    var cf = args[1];
-    var start = args[2];
-    var stop = args[3];
-    var res = args[4];
-
-    proc.fetch(this.file, cf, start, stop, res, cb);
-    break;
-  case 'dump':
-
-    proc.dump(this.file, function (err, text) {
-      if (err) { return cb(err); }
-
-      console.log(text);
-      cb(null);
+  public dump(): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const cb = this._callback(resolve, reject);
+      this._addToQueue({ method: M.DUMP, cb });
     });
-    break;
-  default:
-    assert(0, 'Unknown task: ' + args[0]);
-  }
-
-};
-
-DB.prototype._cb = function (cb) {
-  var self = this;
-
-  return cb || function (err) {
-    if (err) { self.emit('error', err); }
   };
-};
 
-DB.prototype.update = function (ts, values, cb) {
-  // `ts` is optional and defaults to 'N'
-
-  if (arguments.length === 2) {
-    if (typeof values === 'function') {
-      cb = values;
-      values = ts;
-      ts = util.now();
-    }
+  public fetch(cf: ConsolidationFunction, options?: RrdToolFetchOptions): Promise<RrdtoolDatapoint<D>[]> {
+    return new Promise((resolve, reject) => {
+      const cb = this._callback(resolve, reject);
+      this._addToQueue({
+        method: M.FETCH,
+        cb,
+        cf,
+        options,
+      });
+    });
   }
 
-  if (arguments.length === 1) {
-    values = ts;
-    ts = util.now();
+  public async update(values: Partial<D>, options?: RrdToolUpdateOptions): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const cb = this._callback(resolve, reject);
+      this._addToQueue({
+        method: M.UPDATE,
+        cb,
+        values,
+        options,
+      });
+    });
   }
-
-  this.queue.push([['update', ts, values]], this._cb(cb));
-};
-
-DB.prototype.fetch = function (cf, start, stop, res, cb) {
-  // `res` is optional and defaults to highest possible
-
-  if (arguments.length === 4) {
-    if (typeof res === 'function') {
-      cb = res;
-      res = null;
-    }
-  }
-
-  this.queue.push([['fetch', cf, start, stop, res]], this._cb(cb));
-};
-
-DB.prototype._dump = function () {
-  this.queue.push([['dump']], this._cb());
-};
-
-module.exports = exports = DB;
+}
