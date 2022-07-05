@@ -3,13 +3,16 @@ import child_process from "child_process";
 import { ConsolidationFunction, RrdToolCreateOptions, RrdtoolData, RrdtoolDatapoint, RrdtoolDefinition, RrdToolFetchOptions, RrdtoolInfo, RrdToolUpdateOptions } from "./types";
 import { parseInfo } from "./util";
 
-const exec = async (args: string[]): Promise<string> =>
+type Argument = string | number; 
+
+const exec = async (args: Argument[]): Promise<string> =>
   new Promise((resolve, reject) => {
-    debug(["rrdtool"].concat(args).join(" "));
+    const strArgs = args.map(a => a.toString());
+    debug(["rrdtool"].concat(strArgs).join(" "));
 
     const stdout: any[] = [];
     const stderr: any[] = [];
-    const p = child_process.spawn("rrdtool", args, { env: { LANG: "C" } });
+    const p = child_process.spawn("rrdtool", strArgs, { env: { LANG: "C" } });
 
     p.stdout.on("data", chunk => stdout.push(chunk));
     p.stderr.on("data", chunk => stderr.push(chunk));
@@ -51,15 +54,15 @@ const create = async (
   definitions: RrdtoolDefinition[],
   o?: RrdToolCreateOptions,
 ): Promise<void> => {
-  const opts = [];
+  const opts: Argument[] = [];
 
   // rrdtool dosen't allow inserting a value onto
   // the start date. Decrese it by one so we can do that.
-  if (o?.start) opts.push(`--start ${o.start - 1}`);
-  if (o?.step) opts.push(`--step ${o.step}`);
+  if (o?.start) opts.push("--start", o.start - 1);
+  if (o?.step) opts.push("--step", o.step);
   if (!o?.overwrite) opts.push("--no-overwrite");
-  if (o?.templateFile) opts.push(`--template ${o.templateFile}`);
-  if (o?.sourceFile) opts.push(`--source ${o.sourceFile}`);
+  if (o?.templateFile) opts.push("--template", o.templateFile);
+  if (o?.sourceFile) opts.push("--source", o.sourceFile);
 
   exec(["create", filename, ...opts, ...definitions]);
 };
@@ -74,12 +77,12 @@ const fetch = async (
   cf: ConsolidationFunction,
   o?: RrdToolFetchOptions
 ): Promise<RrdtoolDatapoint[]> => {
-  const opts: string[] = [];
+  const opts: Argument[] = [];
 
   // rrdtool counts timestamp very strange, hence the -1
-  if (o?.start) opts.push(`--start ${o.start - 1}`);
-  if (o?.end) opts.push(`--end ${o.end - 1}`);
-  if (o?.resolution) opts.push(`--resolution ${o.resolution}`);
+  if (o?.start) opts.push("--start", o.start - 1);
+  if (o?.end) opts.push("--end", o.end - 1);
+  if (o?.resolution) opts.push("--resolution", o.resolution);
   if (o?.alignStart) opts.push("--align-start");
 
   const data = await exec(["fetch", filename, cf, ...opts]);
@@ -127,8 +130,8 @@ const update = async (filename: string, values: Partial<RrdtoolData>, o?: RrdToo
     template.push(key);
   }
 
-  const opts: string[] = ["--template", template.join(":")]
-  if (o?.skipPastUpdates) opts.push(`--skip-past-updates`);
+  const opts: Argument[] = ["--template", template.join(":")]
+  if (o?.skipPastUpdates) opts.push("--skip-past-updates");
 
   exec([o?.verbose ? "updatev" : "update", filename, ...opts, data.join(":")]);
 };
