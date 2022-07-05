@@ -7,6 +7,7 @@ import { ConsolidationFunction, RrdtoolData, RrdtoolDatapoint, RrdToolFetchOptio
 enum M {
   DUMP,
   FETCH,
+  INFO,
   UPDATE,
 }
 
@@ -24,16 +25,19 @@ interface QFetch extends QBase<RrdtoolDatapoint[]> {
   cf: ConsolidationFunction;
   options?: RrdToolFetchOptions;
 }
+interface QInfo extends QBase<RrdtoolInfo> {
+  method: M.INFO;
+}
 interface QDump extends QBase<string> {
   method: M.DUMP;
 }
 
-type Q = QUpdate | QFetch | QDump;
+type Q = QDump | QFetch | QInfo | QUpdate;
 
 type Callback = (err?: Error | null) => void;
 
 export class RrdtoolDatabase<D extends RrdtoolData> extends EventEmitter {
-  private info: RrdtoolInfo<keyof D & string> | undefined;
+  private m_dataSourceNames: (keyof D & string)[] = [];
   private queue: QueueObject<Q>;
   private readonly errorCallback: Callback;
 
@@ -46,7 +50,8 @@ export class RrdtoolDatabase<D extends RrdtoolData> extends EventEmitter {
   }
 
   private async _load(filename: string) {
-    this.info = await proc.info(filename);
+    const info = await proc.info(filename);
+    this.m_dataSourceNames = info.ds.map(ds => ds.name);
     this.queue.resume();
   }
 
@@ -64,14 +69,18 @@ export class RrdtoolDatabase<D extends RrdtoolData> extends EventEmitter {
   private _worker(q: Q) {
     switch (q.method) {
       case M.UPDATE: {
-        const ds = this.info?.ds || [];
-        const unknownKeys = Object.keys(q.values).filter(k => !ds.find(d => d.name === k));
+        const unknownKeys = Object.keys(q.values).filter(k => !this.m_dataSourceNames.includes(k));
 
         if (unknownKeys.length > 0) {
             return q.cb(new Error(`Unknown data source(s): ${unknownKeys.join(", ")}`));
         }
 
         q.cb(null, proc.update(this.filename, q.values, q.options));
+        break;
+      }
+
+      case M.INFO: {
+        q.cb(null, proc.info(this.filename));
         break;
       }
 
@@ -104,6 +113,13 @@ export class RrdtoolDatabase<D extends RrdtoolData> extends EventEmitter {
       });
     });
   }
+
+  public info(): Promise<RrdtoolInfo<keyof D & string>> {
+    return new Promise((resolve, reject) => {
+      const cb = this._callback(resolve, reject);
+      this._addToQueue({ method: M.INFO, cb });
+    });
+  };
 
   public async update(values: Partial<D>, options?: RrdToolUpdateOptions): Promise<void> {
     return new Promise((resolve, reject) => {
