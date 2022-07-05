@@ -1,4 +1,3 @@
-const debug = require("debug")("rrdtool:proc");
 import child_process from "child_process";
 import { ConsolidationFunction, RrdToolCreateOptions, RrdtoolData, RrdtoolDatapoint, RrdtoolDefinition, RrdToolFetchOptions, RrdtoolInfo, RrdToolUpdateOptions } from "./types";
 import { parseInfo } from "./util";
@@ -8,12 +7,10 @@ type Argument = string | number;
 const exec = async (args: Argument[]): Promise<string> =>
   new Promise((resolve, reject) => {
     const strArgs = args.map(a => a.toString());
-    debug(["rrdtool"].concat(strArgs).join(" "));
+    const p = child_process.spawn("rrdtool", strArgs, { env: { LANG: "C" } });
 
     const stdout: any[] = [];
     const stderr: any[] = [];
-    const p = child_process.spawn("rrdtool", strArgs, { env: { LANG: "C" } });
-
     p.stdout.on("data", chunk => stdout.push(chunk));
     p.stderr.on("data", chunk => stderr.push(chunk));
 
