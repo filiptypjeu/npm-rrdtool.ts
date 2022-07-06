@@ -90,25 +90,30 @@ export interface RrdtoolDatapoint<D extends RrdtoolData = any> {
 
 // XXX: Probably incomplete
 export interface RrdtoolInfo<N extends string = any> {
-  filname: string;
+  filename: string;
   rrd_version: string;
   step: number;
   last_update: Timestamp;
   header_size: number;
   ds: {
     name: N;
+    index: number;
     type: DataSourceType;
     minimal_heartbeat: number;
-    min?: number;
-    max?: number;
+    min: number;
+    max: number;
     last_ds: string;
     value: number;
     unknown_sec: number;
   }[];
   rra: {
     cf: ConsolidationFunction;
+    rows: number;
+    cur_row: number;
+    pdp_per_row: number;
+    xff: number;
     cdp_prep: {
-      value?: number;
+      value: number;
       unknown_datapoints: number;
     }[];
   }[];

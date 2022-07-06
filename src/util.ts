@@ -20,8 +20,10 @@ export const create = async <D extends RrdtoolData>(filename: string, definition
   return new RrdtoolDatabase<D>(filename);
 };
 
+type Value = number | string | null;
+
 export const parseInfo = (str: string): RrdtoolInfo => {
-  const obj = (props: string[], value: number | string): any => {
+  const obj = (props: string[], value: Value): any => {
     if (props.length === 0) return value;
 
     const name = props[0];
@@ -39,7 +41,7 @@ export const parseInfo = (str: string): RrdtoolInfo => {
     }
   };
 
-  const getValue = (str: string): string | number | null => {
+  const getValue = (str: string): Value => {
     if (str.startsWith('"') && str.endsWith('"') && str.length > 1) {
       return str.slice(1, str.length - 1);
     }
@@ -47,17 +49,17 @@ export const parseInfo = (str: string): RrdtoolInfo => {
     return Number(str);
   };
 
-  let info: any = {};
+  let info: any = { ds: [], rra: [] };
   const re = /([\w\[\]\.]+) =(.+)/g;
   str.replace(re, (_: string, name: string, value: string) => {
     const v = getValue(value.trim());
-    if (!Number.isNaN(v) && v !== null) {
-      const props = name.split(/[.\[\]]/).filter(s => s);
-      info = merge(info, obj(props, v));
-    }
+    // XXX: Be able to exclude NaN and null values?
+    const props = name.split(/[.\[\]]/).filter(s => s);
+    info = merge(info, obj(props, v));
     return "";
   });
 
+  // Change data sources into an array
   info["ds"] = [...Object.keys(info["ds"])].map(k => ({ name: k, ...info["ds"][k] }));
   return info;
 };
