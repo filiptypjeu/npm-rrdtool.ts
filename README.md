@@ -1,31 +1,32 @@
 
-# node-rrdtool
+# rrdtool.ts
+
+This is a wrapper for `rrdtool` written in TypeScript. Inspired by the `rrdtool` NPM package https://github.com/LinusU/node-rrdtool.
 
 ## Usage
 
-```js
-var rrdtool = require('rrdtool');
+```ts
+import rrdtool from "rrdtool.ts";
 
-var start = rrdtool.now() - 10;
-var db = rrdtool.create('test.rrd', { start: start, step: 1 }, [
-  'DS:test:GAUGE:1:0:100',
-  'RRA:AVERAGE:0.5:1:10'
+const start = rrdtool.now() - 10;
+const db = await rrdtool.create("test.rrd", { start, step: 1 }, [
+  "DS:test:GAUGE:1:0:100",
+  "RRA:AVERAGE:0.5:1:10"
 ]);
 
-db.update(start + 0, 15);
-db.update(start + 1, 90);
-db.update(start + 2, 35);
-db.update(start + 3, 45);
-db.update(start + 4, 85);
-db.update(start + 5, 10);
-db.update(start + 6, 60);
-db.update(start + 7, 55);
-db.update(start + 8, 75);
-db.update(start + 9, 25);
+db.update({ test: 15 }, { timestamp: start + 0 });
+db.update({ test: 90 }, { timestamp: start + 1 });
+db.update({ test: 35 }, { timestamp: start + 2 });
+db.update({ test: 45 }, { timestamp: start + 3 });
+db.update({ test: 85 }, { timestamp: start + 4 });
+db.update({ test: 10 }, { timestamp: start + 5 });
+db.update({ test: 60 }, { timestamp: start + 6 });
+db.update({ test: 55 }, { timestamp: start + 7 });
+db.update({ test: 75 }, { timestamp: start + 8 });
+db.update({ test: 25 }, { timestamp: start + 9 });
 
-db.fetch('AVERAGE', start, start + 9, function (err, data) {
+db.fetch("AVERAGE", start, start + 9, (err, data) => {
   if (err) { throw err; }
-
   console.log(data);
 });
 ```
