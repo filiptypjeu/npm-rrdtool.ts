@@ -4,7 +4,7 @@ import path from "path";
 const p = path.join(__dirname, "_simple.rrd");
 const start = 1405942000;
 
-describe("simple test database", () => {
+describe("tests on static database", () => {
   let db: RrdtoolDatabase<{ test: number }>;
   beforeEach(() => {
     db = rrdtool.open(p);
@@ -101,5 +101,15 @@ describe("simple test database", () => {
   test("update wrong values", async () => {
     expect.assertions(1);
     return expect(db.update({ invalid: 123 } as any)).rejects.toBeTruthy();
+  });
+
+  test("update too early", async () => {
+    expect.assertions(1);
+    return expect(db.update({ test: 123 }, { timestamp: 123123 })).rejects.toBeTruthy();
+  });
+
+  test("update in wrong order", async () => {
+    expect.assertions(1);
+    return expect(db.update({ test: 123 }, { timestamp: start + 5 })).rejects.toBeTruthy();
   });
 });
