@@ -1,6 +1,6 @@
 import child_process from "child_process";
 import { ConsolidationFunction, RrdToolCreateOptions, RrdtoolData, RrdtoolDatapoint, RrdtoolDefinition, RrdToolFetchOptions, RrdtoolInfo, RrdToolUpdateOptions } from "./types";
-import { parseInfo } from "./util";
+import { now, parseInfo } from "./util";
 
 type Argument = string | number;
 class RrdtoolError extends Error {
@@ -123,7 +123,8 @@ const last = async (filename: string): Promise<number> => {
 
 const update = async (filename: string, values: Partial<RrdtoolData>, o?: RrdToolUpdateOptions): Promise<void> => {
   const template: string[] = [];
-  const data: (number | string)[] = [o?.timestamp || "N"]; // XXX: "N" if no timestamp?
+  // "N" as the timestamp is also possible
+  const data: number[] = [o?.timestamp || now()];
 
   for (const key of Object.keys(values)) {
     const v = values[key]
