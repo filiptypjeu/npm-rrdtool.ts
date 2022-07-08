@@ -1,15 +1,24 @@
 type Timestamp = number;
+
+export interface RrdtoolData {
+  [key: string]: number;
+}
+export interface RrdtoolDatapoint<D extends RrdtoolData = any> {
+    timestamp: Timestamp;
+    values: Partial<D>;
+}
+
 export type Duration = number | `${number}${"s" | "m" | "h" | "d" | "w" | "M" | "y"}`;
 
 type DataSourceType_ = "GAUGE" | "COUNTER" | "DCOUNTER" | "DERIVE" | "DDERIVE" | "ABSOLUTE";
 export type DataSourceType = DataSourceType_ | "COMPUTE";
 
 // DS:ds-name:{GAUGE | COUNTER | DERIVE | DCOUNTER | DDERIVE | ABSOLUTE}:heartbeat:min:max
-type DataSource_<N extends string = any> = `DS:${N}:${DataSourceType_}:${Duration}:${number}:${number}`;
+type DataSource_<D extends RrdtoolData> = `DS:${keyof D & string}:${DataSourceType_}:${Duration}:${number}:${number}`;
 
 // XXX: Enhance rpn-expression type
 // DS:ds-name:COMPUTE:rpn-expression
-type DataSourceCompute<N extends string = any> = `DS:${N}:COMPUTE:${string}`;
+type DataSourceCompute<D extends RrdtoolData> = `DS:${keyof D & string}:COMPUTE:${string}`;
 
 /**
  * https://oss.oetiker.ch/rrdtool/doc/rrdcreate.en.html
@@ -25,7 +34,7 @@ type DataSourceCompute<N extends string = any> = `DS:${N}:COMPUTE:${string}`;
  *  - `max`: number (data range)
  *  - `rpn-expression`: string
  */
-export type DataSource<N extends string = any> = DataSource_<N> | DataSourceCompute<N>;
+export type DataSource<D extends RrdtoolData = any> = DataSource_<D> | DataSourceCompute<D>;
 
 export type ConsolidationFunction = "AVERAGE" | "MIN" | "MAX" | "LAST";
 
@@ -78,25 +87,17 @@ export type RoundRobinArchive =
   | RoundRobinArchiveDevPredict
   | RoundRobinArchiveFailures;
 
-export type RrdtoolDefinition<D extends RrdtoolData = any> = DataSource<keyof D & string> | RoundRobinArchive;
-
-export interface RrdtoolData {
-  [key: string]: number;
-}
-export interface RrdtoolDatapoint<D extends RrdtoolData = any> {
-    timestamp: Timestamp;
-    values: Partial<D>;
-}
+export type RrdtoolDefinition<D extends RrdtoolData = any> = DataSource<D> | RoundRobinArchive;
 
 // XXX: Probably incomplete
-export interface RrdtoolInfo<N extends string = any> {
+export interface RrdtoolInfo<D extends RrdtoolData = any> {
   filename: string;
   rrd_version: string;
   step: number;
   last_update: Timestamp;
   header_size: number;
   ds: {
-    name: N;
+    name: keyof D & string;
     index: number;
     type: DataSourceType;
     minimal_heartbeat: number;
