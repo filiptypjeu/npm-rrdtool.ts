@@ -20,7 +20,7 @@ type DataSourceCompute<N extends string = any> = `DS:${N}:COMPUTE:${string}`;
  *
  * Variable types:
  *  - `ds-name`: string
- *  - `heartbeat`: number (seconds)
+ *  - `heartbeat`: number (seconds) OR duration string
  *  - `min`: number (data range)
  *  - `max`: number (data range)
  *  - `rpn-expression`: string
@@ -62,12 +62,12 @@ type RoundRobinArchiveFailures = `RRA:FAILURES:${Duration}:${number}:${number}:$
  *
  * Variable types:
  *  - `xff`: number (between 0 and 1)
- *  - `steps`: number
- *  - `rows`: number
+ *  - `steps`: number (seconds) OR duration string
+ *  - `rows`: number (seconds) OR duration string
  *  - `alpha`: number (between 0 and 1)
  *  - `beta`: number (between 0 and 1)
  *  - `gamma`: number (between 0 and 1)
- *  - `seasonal period`: number
+ *  - `seasonal period`: number (seconds) OR duration string
  *  - `rra-num`: number (1-based RRA index)
  *  - `smoothing-window`: number (between 0 and 1)
  */

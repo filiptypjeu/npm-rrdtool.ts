@@ -107,6 +107,8 @@ const fetch = async (
   return rows.slice(2).map(parseRow);
 };
 
+// XXX: graph
+
 const info = async (filename: string): Promise<RrdtoolInfo<any>> => {
   // XXX: --noflush?
   const str = await exec(["info", filename]);

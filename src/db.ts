@@ -18,15 +18,15 @@ export class RrdtoolDatabase<D extends RrdtoolData> extends EventEmitter {
     });
   }
 
-  public dump(): Promise<string> {
+  public async dump(): Promise<string> {
     return this._addToQueue(() => proc.dump(this.filename));
   };
 
-  public fetch(cf: ConsolidationFunction, options?: RrdToolFetchOptions): Promise<RrdtoolDatapoint<D>[]> {
+  public async fetch(cf: ConsolidationFunction, options?: RrdToolFetchOptions): Promise<RrdtoolDatapoint<D>[]> {
     return this._addToQueue(() => proc.fetch(this.filename, cf, options));
   }
 
-  public info(): Promise<RrdtoolInfo<keyof D & string>> {
+  public async info(): Promise<RrdtoolInfo<D>> {
     return this._addToQueue(() => proc.info(this.filename));
   };
 
