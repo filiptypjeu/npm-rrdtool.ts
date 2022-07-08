@@ -4,20 +4,11 @@ import EventEmitter from "events";
 import { ConsolidationFunction, RrdtoolData, RrdtoolDatapoint, RrdToolFetchOptions, RrdtoolInfo, RrdToolUpdateOptions } from "./types";
 
 export class RrdtoolDatabase<D extends RrdtoolData> extends EventEmitter {
-  private m_dataSourceNames: (keyof D & string)[] = [];
   private m_queue: Queue;
 
   constructor(public readonly filename: string) {
     super();
-    this.m_queue = new Queue();
-    this.m_queue.stop();
-    this._load();
-  }
-
-  private async _load() {
-    const info = await proc.info(this.filename);
-    this.m_dataSourceNames = info.ds.map(ds => ds.name);
-    this.m_queue.start();
+    this.m_queue = new Queue({ concurrency: 1, autostart: true });
   }
 
   private async _addToQueue<T>(task: () => Promise<T>): Promise<T> {
@@ -40,12 +31,6 @@ export class RrdtoolDatabase<D extends RrdtoolData> extends EventEmitter {
   };
 
   public async update(values: Partial<D>, options?: RrdToolUpdateOptions): Promise<void> {
-    const unknownKeys = Object.keys(values).filter(k => !this.m_dataSourceNames.includes(k));
-
-    if (unknownKeys.length > 0) {
-      return Promise.reject(new Error(`Unknown data source(s): ${unknownKeys.join(", ")}`));
-    }
-
     return this._addToQueue(() => proc.update(this.filename, values, options));
   }
 }
