@@ -9,6 +9,10 @@ export const now = () => {
 };
 
 export const open = <D extends RrdtoolData>(filename: string): RrdtoolDatabase<D> => {
+  if (!fs.existsSync(filename)) {
+    throw new Error(`File "${filename}" does not exist`);
+  }
+
   return new RrdtoolDatabase<D>(filename);
 };
 

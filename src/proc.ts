@@ -2,7 +2,10 @@ import child_process from "child_process";
 import { ConsolidationFunction, RrdToolCreateOptions, RrdtoolData, RrdtoolDatapoint, RrdtoolDefinition, RrdToolFetchOptions, RrdtoolInfo, RrdToolUpdateOptions } from "./types";
 import { parseInfo } from "./util";
 
-type Argument = string | number; 
+type Argument = string | number;
+class RrdtoolError extends Error {
+    public override name = "RrdtoolError";
+}
 
 const exec = async (args: Argument[]): Promise<string> =>
   new Promise((resolve, reject) => {
@@ -17,7 +20,7 @@ const exec = async (args: Argument[]): Promise<string> =>
     p.on("close", code => {
       if (code !== 0) {
         const str = Buffer.concat(stderr).toString();
-        const err = new Error(str.replace(/^ERROR: /, ""));
+        const err = new RrdtoolError(str.replace(/^ERROR:/, "").trim());
 
         return reject(err);
       }
@@ -61,7 +64,7 @@ const create = async (
   if (o?.templateFile) opts.push("--template", o.templateFile);
   if (o?.sourceFile) opts.push("--source", o.sourceFile);
 
-  exec(["create", filename, ...opts, ...definitions]);
+  return exec(["create", filename, ...opts, ...definitions]).then();
 };
 
 const dump = async (filename: string): Promise<string> => {
@@ -130,7 +133,7 @@ const update = async (filename: string, values: Partial<RrdtoolData>, o?: RrdToo
   const opts: Argument[] = ["--template", template.join(":")]
   if (o?.skipPastUpdates) opts.push("--skip-past-updates");
 
-  exec([o?.verbose ? "updatev" : "update", filename, ...opts, data.join(":")]);
+  return exec([o?.verbose ? "updatev" : "update", filename, ...opts, data.join(":")]).then();
 };
 
 export default {

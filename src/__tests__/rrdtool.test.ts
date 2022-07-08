@@ -14,6 +14,10 @@ describe("simple test database", () => {
     expect(db).toBeTruthy();
   });
 
+  test("open invalid file", async () => {
+    expect(() => rrdtool.open("invalid.rrd")).toThrow();
+  });
+
   test("info", async () => {
     const info: RrdtoolInfo = {
       filename: p,
@@ -96,10 +100,6 @@ describe("simple test database", () => {
 
   test("update wrong values", async () => {
     expect.assertions(1);
-    try {
-      await db.update({ invalid: 123 } as any);
-    } catch (e) {
-      expect(e).toBeTruthy();
-    }
+    return expect(db.update({ invalid: 123 } as any)).rejects.toBeTruthy();
   });
 });
