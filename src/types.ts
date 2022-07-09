@@ -1,3 +1,5 @@
+import { Color, Font, XGrid, YGrid } from "./proc";
+
 type Timestamp = number;
 
 export interface RrdtoolData {
@@ -128,13 +130,7 @@ export interface RrdToolCreateOptions {
   sourceFile?: string;
 }
 
-type Unit = "SECOND" | "MINUTE" | "HOUR" | "DAY" | "WEEK" | "MONTH" | "YEAR";
-// G = base grid, M = major grid, L = labels
-// G unit:G interval:M unit:M interval:L unit:L interval:L position:L strftime
-type XGrid = `${Unit}:${number}:${Unit}:${number}:${Unit}:${number}:${number}:${string}`;
 type AxisFormatter = "numeric" | "timestamp" | "duration";
-export type Color = [number, number, number] | [number, number, number, number];
-export type Font = string | number | { size: number, name: string };
 
 export interface RrdToolGraphOptions {
   output?: {
@@ -176,17 +172,16 @@ export interface RrdToolGraphOptions {
     unitsLength?: number;
     siUnits?: boolean;
     // Tied to the left axis via [scale, shift]
-    rightAxis?: [number, number];
+    rightAxis?: `${number}:${number}` | [number, number];
     rightLabel?: string;
     rightFormatter?: AxisFormatter;
     rightFormat?: string;
-    base?: number;
     font?: Font;
+    base?: number;
   };
   grid?: {
-    x?: XGrid | false;
-    // [grid step, label factor]
-    y?: [number, number] | false | "alternative";
+    x?: XGrid;
+    y?: YGrid;
     baseColor?: Color;
     majorColor?: Color;
     axisColor?: Color;
@@ -204,9 +199,11 @@ export interface RrdToolGraphOptions {
   };
   legend?: {
     forceRulesLegend?: boolean;
-    font?: Font;
     position?: "north" | "south" | "west" | "east";
     direction?: "topdown" | "bottomup" | "bottomup2";
+    iconFrameColor?: Color;
+    font?: Font;
+    dynamicIcons?: boolean;
   } | false;
   title?: string | {
     text: string;
@@ -224,8 +221,6 @@ export interface RrdToolGraphOptions {
     useNanForMissingData?: boolean;
     zoomFactor?: number;
   };
-  frameColor?: Color; // XXX: What is this?
-  dynamicLabels?: boolean; // XXX: What is this?
 }
 
 export interface RrdToolUpdateOptions {

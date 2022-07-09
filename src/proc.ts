@@ -1,5 +1,5 @@
 import child_process from "child_process";
-import { Color, ConsolidationFunction, Font, RrdToolCreateOptions, RrdtoolData, RrdtoolDatapoint, RrdtoolDefinition, RrdToolFetchOptions, RrdToolGraphOptions, RrdtoolInfo, RrdToolUpdateOptions } from "./types";
+import { ConsolidationFunction, RrdToolCreateOptions, RrdtoolData, RrdtoolDatapoint, RrdtoolDefinition, RrdToolFetchOptions, RrdToolGraphOptions, RrdtoolInfo, RrdToolUpdateOptions } from "./types";
 import { now, parseInfo } from "./util";
 
 type Argument = string | number;
@@ -7,12 +7,14 @@ class RrdtoolError extends Error {
     public override name = "RrdtoolError";
 }
 
+export type Color = [number, number, number] | [number, number, number, number];
 type ColorTag = "BACK" | "CANVAS" | "SHADEA" | "SHADEB" | "GRID" | "MGRID" | "FONT" | "AXIS" | "FRAME" | "ARROW";
 const color = (type: ColorTag, color: Color): string[] => [
   "--color",
   `${type}#${color.map(c => c.toString(16).toUpperCase().padStart(2, "0")).join("")}`
 ];
 
+export type Font = string | number | { size: number, name: string };
 type FontTag = "DEFAULT" | "TITLE" | "AXIS" | "UNIT" | "LEGEND" | "WATERMARK";
 const font = (type: FontTag, font: Font): string[] => {
   let f: { name?: string, size?: number } = {};
@@ -24,6 +26,26 @@ const font = (type: FontTag, font: Font): string[] => {
     `${type}:${f.size || 0}:${f.name || ""}`
   ];
 }
+
+export type Unit = "SECOND" | "MINUTE" | "HOUR" | "DAY" | "WEEK" | "MONTH" | "YEAR";
+interface UnitInterval {
+  unit: Unit;
+  interval: number;
+}
+interface LabelUnitInterval extends UnitInterval {
+  position: number;
+  format: string; // XXX: strftime format string
+}
+// G = base grid, M = major grid, L = labels
+// G unit:G interval:M unit:M interval:L unit:L interval:L position:L strftime
+export type XGrid = false | `${Unit}:${number}:${Unit}:${number}:${Unit}:${number}:${number}:${string}` | {
+  base: UnitInterval;
+  major: UnitInterval;
+  labels: LabelUnitInterval;
+};
+
+// [grid step, label factor]
+export type YGrid = `${number}:${number}` | [number, number] | false | "alternative";
 
 const exec = async (args: Argument[]): Promise<string> =>
   new Promise((resolve, reject) => {
