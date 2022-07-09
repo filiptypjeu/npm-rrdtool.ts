@@ -102,16 +102,16 @@ const exec = async (args: Argument[]): Promise<string> =>
 const create = async (
   filename: string,
   definitions: RrdtoolDefinition[],
-  o?: RrdToolCreateOptions,
+  o: RrdToolCreateOptions,
 ): Promise<void> => {
   const opts = new Opts();
 
   // rrdtool dosen't allow inserting a value onto the start date, so we decrease it by one so we can do that
-  opts.form("--start", o?.start, v => v - 1);
-  opts.push("--step", o?.step);
-  opts.flag("--no-overwrite", !o?.overwrite); // Opt-out needed
-  opts.push("--template", o?.templateFile);
-  opts.push("--source", o?.sourceFile);
+  opts.form("--start", o.start, v => v - 1);
+  opts.push("--step", o.step);
+  opts.flag("--no-overwrite", !o.overwrite); // Opt-out needed
+  opts.push("--template", o.templateFile);
+  opts.push("--source", o.sourceFile);
 
   return exec(["create", filename, ...opts.res, ...definitions]).then();
 };
@@ -124,15 +124,15 @@ const dump = async (filename: string): Promise<string> => {
 const fetch = async (
   filename: string,
   cf: ConsolidationFunction,
-  o?: RrdToolFetchOptions
+  o: RrdToolFetchOptions
 ): Promise<RrdtoolDatapoint[]> => {
   const opts = new Opts();
 
   // rrdtool counts timestamp very strange, hence the -1
-  opts.form("--start", o?.start, v => v - 1);
-  opts.form("--end", o?.end, v => v - 1);
-  opts.push("--resolution", o?.resolution);
-  opts.flag("--align-start", o?.alignStart);
+  opts.form("--start", o.start, v => v - 1);
+  opts.form("--end", o.end, v => v - 1);
+  opts.push("--resolution", o.resolution);
+  opts.flag("--align-start", o.alignStart);
 
   const data = await exec(["fetch", filename, cf, ...opts.res]);
   const rows = data.trim().split("\n");
@@ -156,97 +156,97 @@ const fetch = async (
   return rows.slice(2).map(parseRow);
 };
 
-const graph = async (filename: string, o?: RrdToolGraphOptions): Promise<string> => {
+const graph = async (filename: string, o: RrdToolGraphOptions): Promise<string> => {
   const opts = new Opts();
 
-  opts.push("--width", o?.output?.width);
-  opts.push("--height", o?.output?.height);
-  opts.flag("--only-graph", o?.output?.onlyGraph);
-  opts.flag("--full-size-mode", o?.output?.fullSizeMode);
-  opts.push("--imgformat", o?.output?.format);
-  opts.flag("--interlaced", o?.output?.interlaced);
-  opts.flag("--lazy", o?.output?.lazy);
-  opts.push("--imginfo", o?.output?.returnStringFormat);
+  opts.push("--width", o.output?.width);
+  opts.push("--height", o.output?.height);
+  opts.flag("--only-graph", o.output?.onlyGraph);
+  opts.flag("--full-size-mode", o.output?.fullSizeMode);
+  opts.push("--imgformat", o.output?.format);
+  opts.flag("--interlaced", o.output?.interlaced);
+  opts.flag("--lazy", o.output?.lazy);
+  opts.push("--imginfo", o.output?.returnStringFormat);
 
-  if (typeof o?.border === "number") opts.push("--border", o.border);
+  if (typeof o.border === "number") opts.push("--border", o.border);
   else {
-    opts.push("--border", o?.border?.width);
-    opts.color("SHADEA", o?.border?.colorNW);
-    opts.color("SHADEB", o?.border?.colorNW);
+    opts.push("--border", o.border?.width);
+    opts.color("SHADEA", o.border?.colorNW);
+    opts.color("SHADEB", o.border?.colorNW);
   }
 
-  opts.push("--start", o?.x?.start);
-  opts.push("--end", o?.x?.end);
-  opts.push("--step", o?.x?.step);
-  opts.push("--week-fmt", o?.x?.weekFormat);
-  opts.font("AXIS", o?.x?.font);
+  opts.push("--start", o.x?.start);
+  opts.push("--end", o.x?.end);
+  opts.push("--step", o.x?.step);
+  opts.push("--week-fmt", o.x?.weekFormat);
+  opts.font("AXIS", o.x?.font);
 
-  opts.push("--vertical-label", o?.y?.label);
-  opts.push("--lower-limit", o?.y?.lower);
-  opts.push("--upper-limit", o?.y?.upper);
-  opts.flag("--rigid", o?.y?.rigid);
-  opts.flag("--allow-shrink", o?.y?.allowShrink);
-  if (o?.y?.altAutoscale) {
+  opts.push("--vertical-label", o.y?.label);
+  opts.push("--lower-limit", o.y?.lower);
+  opts.push("--upper-limit", o.y?.upper);
+  opts.flag("--rigid", o.y?.rigid);
+  opts.flag("--allow-shrink", o.y?.allowShrink);
+  if (o.y?.altAutoscale) {
     opts.flag("--alt-autoscale-min", o.y.altAutoscale[0]);
     opts.flag("--alt-autoscale-max", o.y.altAutoscale[1]);
   }
-  opts.flag("--no-gridfit", o?.y?.noGridFit);
-  opts.push("--left-axis-formatter", o?.y?.formatter);
-  opts.push("--left-axis-format", o?.y?.format);
-  opts.flag("--logarithmic", o?.y?.logarithmic);
-  opts.push("--units-exponent", o?.y?.unitsExponent);
-  opts.push("--units-length", o?.y?.unitsLength);
-  opts.flag("--units=si", o?.y?.siUnits);
-  opts.form("--right-axis", o?.y?.rightAxis, v => typeof v === "string" ? v : v.join(":"));
-  opts.push("--right-axis-label", o?.y?.rightLabel);
-  opts.push("--right-axis-formatter", o?.y?.rightFormatter);
-  opts.push("--right-axis-format", o?.y?.rightFormat);
-  opts.font("UNIT", o?.y?.font);
-  opts.push("--base", o?.y?.base);
+  opts.flag("--no-gridfit", o.y?.noGridFit);
+  opts.push("--left-axis-formatter", o.y?.formatter);
+  opts.push("--left-axis-format", o.y?.format);
+  opts.flag("--logarithmic", o.y?.logarithmic);
+  opts.push("--units-exponent", o.y?.unitsExponent);
+  opts.push("--units-length", o.y?.unitsLength);
+  opts.flag("--units=si", o.y?.siUnits);
+  opts.form("--right-axis", o.y?.rightAxis, v => typeof v === "string" ? v : v.join(":"));
+  opts.push("--right-axis-label", o.y?.rightLabel);
+  opts.push("--right-axis-formatter", o.y?.rightFormatter);
+  opts.push("--right-axis-format", o.y?.rightFormat);
+  opts.font("UNIT", o.y?.font);
+  opts.push("--base", o.y?.base);
 
-  opts.xGrid(o?.grid?.x);
-  opts.yGrid(o?.grid?.y);
-  opts.color("GRID", o?.grid?.baseColor);
-  opts.color("MGRID", o?.grid?.majorColor);
-  opts.color("AXIS", o?.grid?.axisColor);
-  opts.color("ARROW", o?.grid?.arrowColor);
-  opts.form("--grid-dash", o?.grid?.dashed, v => v.join(":"));
+  opts.xGrid(o.grid?.x);
+  opts.yGrid(o.grid?.y);
+  opts.color("GRID", o.grid?.baseColor);
+  opts.color("MGRID", o.grid?.majorColor);
+  opts.color("AXIS", o.grid?.axisColor);
+  opts.color("ARROW", o.grid?.arrowColor);
+  opts.form("--grid-dash", o.grid?.dashed, v => v.join(":"));
   
-  opts.color("FONT", o?.text?.color);
-  opts.font("DEFAULT", o?.text?.defaultFont);
-  opts.push("--font-render-mode", o?.text?.fontRenderMode);
-  opts.push("--font-smoothing-threshold", o?.text?.fontSmoothingThreshold);
-  opts.flag("--pango-markup", o?.text?.usePangoMarkup);
-  opts.push("--tabwidth", o?.text?.tabWidth);
+  opts.color("FONT", o.text?.color);
+  opts.font("DEFAULT", o.text?.defaultFont);
+  opts.push("--font-render-mode", o.text?.fontRenderMode);
+  opts.push("--font-smoothing-threshold", o.text?.fontSmoothingThreshold);
+  opts.flag("--pango-markup", o.text?.usePangoMarkup);
+  opts.push("--tabwidth", o.text?.tabWidth);
 
-  if (o?.legend === false) opts.flag("--no-legend", true);
+  if (o.legend === false) opts.flag("--no-legend", true);
   else {
-    opts.flag("--force-rules-legend", o?.legend?.forceRulesLegend);
-    // opts.flag(`--legend-position=${o?.legend?.position}`, o?.legend?.position);
-    // opts.flag(`--legend-direction=${o?.legend?.direction}`, o?.legend?.direction);
-    opts.color("FRAME", o?.legend?.iconFrameColor);
-    opts.font("LEGEND", o?.legend?.font);
-    opts.flag("--dynamic-labels", o?.legend?.dynamicIcons);
+    opts.flag("--force-rules-legend", o.legend?.forceRulesLegend);
+    // opts.flag(`--legend-position=${o.legend?.position}`, o.legend?.position);
+    // opts.flag(`--legend-direction=${o.legend?.direction}`, o.legend?.direction);
+    opts.color("FRAME", o.legend?.iconFrameColor);
+    opts.font("LEGEND", o.legend?.font);
+    opts.flag("--dynamic-labels", o.legend?.dynamicIcons);
   }
 
-  if (typeof o?.title === "string") opts.push("--title", o.title);
+  if (typeof o.title === "string") opts.push("--title", o.title);
   else {
-    opts.push("--title", o?.title?.text);
-    opts.font("TITLE", o?.title?.font);
+    opts.push("--title", o.title?.text);
+    opts.font("TITLE", o.title?.font);
   }
 
-  if (typeof o?.watermark === "string") opts.push("--watermark", o.watermark);
+  if (typeof o.watermark === "string") opts.push("--watermark", o.watermark);
   else {
-    opts.push("--watermark", o?.watermark?.text);
-    opts.font("WATERMARK", o?.watermark?.font);
+    opts.push("--watermark", o.watermark?.text);
+    opts.font("WATERMARK", o.watermark?.font);
   }
 
-  opts.color("BACK", o?.graph?.backgroundColor);
-  opts.color("CANVAS", o?.graph?.canvasColor);
-  opts.push("--zoom", o?.graph?.zoomFactor);
-  opts.push("--graph-render-mode", o?.graph?.renderMode);
-  opts.flag("--slope-mode", o?.graph?.slopeMode);
-  opts.flag("--use-nan-for-all-missing-data", o?.graph?.useNanForMissingData);
+  opts.color("BACK", o.graph?.backgroundColor);
+  opts.color("CANVAS", o.graph?.canvasColor);
+  opts.push("--zoom", o.graph?.zoomFactor);
+  opts.push("--graph-render-mode", o.graph?.renderMode);
+  opts.flag("--slope-mode", o.graph?.slopeMode);
+  opts.flag("--use-nan-for-all-missing-data", o.graph?.useNanForMissingData);
 
   return exec(["graph", filename, ...opts.res]);
 };
@@ -263,10 +263,10 @@ const last = async (filename: string): Promise<number> => {
 
 // XXX: lastUpdate
 
-const update = async (filename: string, values: Partial<RrdtoolData>, o?: RrdToolUpdateOptions): Promise<string> => {
+const update = async (filename: string, values: Partial<RrdtoolData>, o: RrdToolUpdateOptions): Promise<string> => {
   const template: string[] = [];
   // "N" as the timestamp is also possible
-  const data: number[] = [o?.timestamp || now()];
+  const data: number[] = [o.timestamp || now()];
 
   for (const key of Object.keys(values)) {
     const v = values[key]
@@ -276,9 +276,9 @@ const update = async (filename: string, values: Partial<RrdtoolData>, o?: RrdToo
   }
 
   const opts: Argument[] = ["--template", template.join(":")]
-  if (o?.skipPastUpdates) opts.push("--skip-past-updates");
+  if (o.skipPastUpdates) opts.push("--skip-past-updates");
 
-   return exec([o?.verbose ? "updatev" : "update", filename, ...opts, data.join(":")]);
+   return exec([o.verbose ? "updatev" : "update", filename, ...opts, data.join(":")]);
 };
 
 export default {

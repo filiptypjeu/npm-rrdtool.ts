@@ -18,7 +18,7 @@ export const open = <D extends RrdtoolData>(filename: string): RrdtoolDatabase<D
 
 export const create = async <D extends RrdtoolData>(filename: string, definitions: RrdtoolDefinition<D>[], options?: RrdToolCreateOptions): Promise<RrdtoolDatabase<D>> => {
   if (!fs.existsSync(filename)) {
-    await proc.create(filename, definitions, options);
+    await proc.create(filename, definitions, options || {});
   }
 
   return new RrdtoolDatabase<D>(filename);

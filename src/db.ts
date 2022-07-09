@@ -23,11 +23,11 @@ export class RrdtoolDatabase<D extends RrdtoolData> extends EventEmitter {
   };
 
   public async fetch(cf: ConsolidationFunction, options?: RrdToolFetchOptions): Promise<RrdtoolDatapoint<D>[]> {
-    return this._addToQueue(() => proc.fetch(this.filename, cf, options));
+    return this._addToQueue(() => proc.fetch(this.filename, cf, options || {}));
   }
 
   public async graph(options?: RrdToolGraphOptions): Promise<string> {
-    return this._addToQueue(() => proc.graph(this.filename, options));
+    return this._addToQueue(() => proc.graph(this.filename, options || {}));
   }
 
   public async info(): Promise<RrdtoolInfo<D>> {
@@ -36,6 +36,6 @@ export class RrdtoolDatabase<D extends RrdtoolData> extends EventEmitter {
 
   public async update<T extends RrdToolUpdateOptions>(values: Partial<D>, options?: T): Promise<T extends { verbose: true } ? string : void> {
     // Returing empty string as void if not verbose
-    return this._addToQueue(() => proc.update(this.filename, values, options) as any);
+    return this._addToQueue(() => proc.update(this.filename, values, options || {}) as any);
   }
 }
