@@ -204,6 +204,50 @@ const graph = async (filename: string, o?: RrdToolGraphOptions): Promise<string>
   opts.font("UNIT", o?.y?.font);
   opts.push("--base", o?.y?.base);
 
+  opts.xGrid(o?.grid?.x);
+  opts.yGrid(o?.grid?.y);
+  opts.color("GRID", o?.grid?.baseColor);
+  opts.color("MGRID", o?.grid?.majorColor);
+  opts.color("AXIS", o?.grid?.axisColor);
+  opts.color("ARROW", o?.grid?.arrowColor);
+  opts.form("--grid-dash", o?.grid?.dashed, v => v.join(":"));
+  
+  opts.color("FONT", o?.text?.color);
+  opts.font("DEFAULT", o?.text?.defaultFont);
+  opts.push("--font-render-mode", o?.text?.fontRenderMode);
+  opts.push("--font-smoothing-threshold", o?.text?.fontSmoothingThreshold);
+  opts.flag("--pango-markup", o?.text?.usePangoMarkup);
+  opts.push("--tabwidth", o?.text?.tabWidth);
+
+  if (o?.legend === false) opts.flag("--no-legend", true);
+  else {
+    opts.flag("--force-rules-legend", o?.legend?.forceRulesLegend);
+    // opts.flag(`--legend-position=${o?.legend?.position}`, o?.legend?.position);
+    // opts.flag(`--legend-direction=${o?.legend?.direction}`, o?.legend?.direction);
+    opts.color("FRAME", o?.legend?.iconFrameColor);
+    opts.font("LEGEND", o?.legend?.font);
+    opts.flag("--dynamic-labels", o?.legend?.dynamicIcons);
+  }
+
+  if (typeof o?.title === "string") opts.push("--title", o.title);
+  else {
+    opts.push("--title", o?.title?.text);
+    opts.font("TITLE", o?.title?.font);
+  }
+
+  if (typeof o?.watermark === "string") opts.push("--watermark", o.watermark);
+  else {
+    opts.push("--watermark", o?.watermark?.text);
+    opts.font("WATERMARK", o?.watermark?.font);
+  }
+
+  opts.color("BACK", o?.graph?.backgroundColor);
+  opts.color("CANVAS", o?.graph?.canvasColor);
+  opts.push("--zoom", o?.graph?.zoomFactor);
+  opts.push("--graph-render-mode", o?.graph?.renderMode);
+  opts.flag("--slope-mode", o?.graph?.slopeMode);
+  opts.flag("--use-nan-for-all-missing-data", o?.graph?.useNanForMissingData);
+
   return exec(["graph", filename, ...opts.res]);
 };
 
