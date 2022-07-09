@@ -34,7 +34,8 @@ export class RrdtoolDatabase<D extends RrdtoolData> extends EventEmitter {
     return this._addToQueue(() => proc.info(this.filename));
   };
 
-  public async update(values: Partial<D>, options?: RrdToolUpdateOptions): Promise<void> {
-    return this._addToQueue(() => proc.update(this.filename, values, options));
+  public async update<T extends RrdToolUpdateOptions>(values: Partial<D>, options?: T): Promise<T extends { verbose: true } ? string : void> {
+    // Returing empty string as void if not verbose
+    return this._addToQueue(() => proc.update(this.filename, values, options) as any);
   }
 }

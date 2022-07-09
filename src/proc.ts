@@ -263,7 +263,7 @@ const last = async (filename: string): Promise<number> => {
 
 // XXX: lastUpdate
 
-const update = async (filename: string, values: Partial<RrdtoolData>, o?: RrdToolUpdateOptions): Promise<void> => {
+const update = async (filename: string, values: Partial<RrdtoolData>, o?: RrdToolUpdateOptions): Promise<string> => {
   const template: string[] = [];
   // "N" as the timestamp is also possible
   const data: number[] = [o?.timestamp || now()];
@@ -278,7 +278,7 @@ const update = async (filename: string, values: Partial<RrdtoolData>, o?: RrdToo
   const opts: Argument[] = ["--template", template.join(":")]
   if (o?.skipPastUpdates) opts.push("--skip-past-updates");
 
-  return exec([o?.verbose ? "updatev" : "update", filename, ...opts, data.join(":")]).then();
+   return exec([o?.verbose ? "updatev" : "update", filename, ...opts, data.join(":")]);
 };
 
 export default {

@@ -27,6 +27,20 @@ describe("tests on temporary databases", () => {
     expect(db).toBeTruthy();
   });
 
+  test("update verbose", async () => {
+    const db = await rrdtool.create<{ test: number }>(p, [
+      "DS:test:GAUGE:1:0:100",
+      "RRA:AVERAGE:0:1:10",
+    ], { start, step: 1 });
+
+    const s = await db.update({ test: 42 }, { timestamp: start, verbose: true });
+    const a = s.trim().split("\n");
+    expect(a).toHaveLength(2);
+
+    const v = await db.update({ test: 42 }, { timestamp: start + 1 });
+    expect(v).toBe("");
+  });
+
   test("update and fetch 10 values", async () => {
     const db = await rrdtool.create<{ test: number }>(p, [
       "DS:test:GAUGE:1:0:100",
