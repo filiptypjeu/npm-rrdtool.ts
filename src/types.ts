@@ -121,11 +121,111 @@ export interface RrdtoolInfo<D extends RrdtoolData = any> {
 }
 
 export interface RrdToolCreateOptions {
-  start?: Timestamp,
-  step?: Duration,
-  overwrite?: boolean,
-  templateFile?: string,
-  sourceFile?: string,
+  start?: Timestamp;
+  step?: Duration;
+  overwrite?: boolean;
+  templateFile?: string;
+  sourceFile?: string;
+}
+
+type Unit = "SECOND" | "MINUTE" | "HOUR" | "DAY" | "WEEK" | "MONTH" | "YEAR";
+// G = base grid, M = major grid, L = labels
+// G unit:G interval:M unit:M interval:L unit:L interval:L position:L strftime
+type XGrid = `${Unit}:${number}:${Unit}:${number}:${Unit}:${number}:${number}:${string}`;
+type AxisFormatter = "numeric" | "timestamp" | "duration";
+export type Color = [number, number, number] | [number, number, number, number];
+export type Font = string | number | { size: number, name: string };
+
+export interface RrdToolGraphOptions {
+  output?: {
+    width?: number;
+    height?: number;
+    onlyGraph?: boolean;
+    fullSizeMode?: boolean;
+    lazy?: boolean;
+    returnStringFormat?: string; // XXX: printfstr
+    format?: "PNG" | "SVG" | "EPS" | "PDF" | "XML" | "XMLENUM" | "JSON" | "JSONTIME" | "CSV" | "TSV" | "SSV";
+    interlaced?: boolean;
+  };
+  border?: number | {
+    width?: number;
+    colorNW?: Color;
+    colorSE?: Color;
+  };
+  x?: {
+    start?: Timestamp;
+    end?: Timestamp;
+    step?: number; // XXX: Duration?
+    // Default: "Week %V"
+    weekFormat?: string; // XXX: strftime format
+    font?: Font;
+  };
+  y?: {
+    label?: string;
+    lower?: number;
+    upper?: number;
+    rigid?: boolean;
+    allowShrink?: boolean;
+    // [min, max] or both
+    altAutoscale?: [boolean, boolean];
+    noGridFit?: boolean;
+    formatter?: AxisFormatter;
+    format?: string;
+    logarithmic?: boolean;
+    unitsExponent?: number;
+    unitsLength?: number;
+    siUnits?: boolean;
+    // Tied to the left axis via [scale, shift]
+    rightAxis?: [number, number];
+    rightLabel?: string;
+    rightFormatter?: AxisFormatter;
+    rightFormat?: string;
+    base?: number;
+    font?: Font;
+  };
+  grid?: {
+    x?: XGrid | false;
+    // [grid step, label factor]
+    y?: [number, number] | false | "alternative";
+    baseColor?: Color;
+    majorColor?: Color;
+    axisColor?: Color;
+    arrowColor?: Color;
+    // [on, off]
+    dashed?: [number, number];
+  };
+  text?: {
+    color?: Color;
+    defaultFont?: Font;
+    fontRenderMode?: "normal" | "light" | "mono";
+    fontSmoothingThreshold?: number;
+    tabWidth?: number;
+    usePangoMarkup?: boolean;
+  };
+  legend?: {
+    forceRulesLegend?: boolean;
+    font?: Font;
+    position?: "north" | "south" | "west" | "east";
+    direction?: "topdown" | "bottomup" | "bottomup2";
+  } | false;
+  title?: string | {
+    text: string;
+    font?: Font;
+  };
+  watermark?: string | {
+    text: string;
+    font?: Font;
+  };
+  graph?: { // XXX: Not the best fit
+    backgroundColor?: Color;
+    canvasColor?: Color;
+    renderMode?: "normal" | "mono";
+    slopeMode?: boolean;
+    useNanForMissingData?: boolean;
+    zoomFactor?: number;
+  };
+  frameColor?: Color; // XXX: What is this?
+  dynamicLabels?: boolean; // XXX: What is this?
 }
 
 export interface RrdToolUpdateOptions {

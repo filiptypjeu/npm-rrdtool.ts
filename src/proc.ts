@@ -1,10 +1,28 @@
 import child_process from "child_process";
-import { ConsolidationFunction, RrdToolCreateOptions, RrdtoolData, RrdtoolDatapoint, RrdtoolDefinition, RrdToolFetchOptions, RrdtoolInfo, RrdToolUpdateOptions } from "./types";
+import { Color, ConsolidationFunction, Font, RrdToolCreateOptions, RrdtoolData, RrdtoolDatapoint, RrdtoolDefinition, RrdToolFetchOptions, RrdToolGraphOptions, RrdtoolInfo, RrdToolUpdateOptions } from "./types";
 import { now, parseInfo } from "./util";
 
 type Argument = string | number;
 class RrdtoolError extends Error {
     public override name = "RrdtoolError";
+}
+
+type ColorTag = "BACK" | "CANVAS" | "SHADEA" | "SHADEB" | "GRID" | "MGRID" | "FONT" | "AXIS" | "FRAME" | "ARROW";
+const color = (type: ColorTag, color: Color): string[] => [
+  "--color",
+  `${type}#${color.map(c => c.toString(16).toUpperCase().padStart(2, "0")).join("")}`
+];
+
+type FontTag = "DEFAULT" | "TITLE" | "AXIS" | "UNIT" | "LEGEND" | "WATERMARK";
+const font = (type: FontTag, font: Font): string[] => {
+  let f: { name?: string, size?: number } = {};
+  if (typeof font === "string") f.name = font;
+  else if (typeof font === "number") f.size = font;
+  else f = { ...font };
+  return [
+    "--font",
+    `${type}:${f.size || 0}:${f.name || ""}`
+  ];
 }
 
 const exec = async (args: Argument[]): Promise<string> =>
@@ -107,7 +125,56 @@ const fetch = async (
   return rows.slice(2).map(parseRow);
 };
 
-// XXX: graph
+const graph = async (filename: string, o?: RrdToolGraphOptions): Promise<string> => {
+  const opts: Argument[] = [];
+
+  if (o?.output?.width) opts.push("--width", o.output.width);
+  if (o?.output?.height) opts.push("--height", o.output.height);
+  if (o?.output?.onlyGraph) opts.push("--only-graph");
+  if (o?.output?.fullSizeMode) opts.push("--full-size-mode");
+  if (o?.output?.format) opts.push("--imgformat", o.output.format);
+  if (o?.output?.interlaced) opts.push("--interlaced");
+  if (o?.output?.lazy) opts.push("--lazy");
+  if (o?.output?.returnStringFormat) opts.push("--imginfo", o.output.returnStringFormat);
+
+  if (typeof o?.border === "number") opts.push("--border", o.border);
+  else {
+    if (o?.border?.width) opts.push("--border", o.border.width);
+    if (o?.border?.colorNW) opts.push(...color("SHADEA", o.border.colorNW));
+    if (o?.border?.colorNW) opts.push(...color("SHADEB", o.border.colorNW));
+  }
+
+  if (o?.x?.start) opts.push("--start", o.x.start);
+  if (o?.x?.end) opts.push("--end", o.x.end);
+  if (o?.x?.step) opts.push("--step", o.x.step);
+  if (o?.x?.weekFormat) opts.push("--week-fmt", o.x.weekFormat);
+  if (o?.x?.font) opts.push(...font("AXIS", o.x.font));
+
+  if (o?.y?.label) opts.push("--vertical-label", o.y.label);
+  if (o?.y?.lower) opts.push("--lower-limit", o.y.lower);
+  if (o?.y?.upper) opts.push("--upper-limit", o.y.upper);
+  if (o?.y?.rigid) opts.push("--rigid");
+  if (o?.y?.allowShrink) opts.push("--allow-shrink");
+  if (o?.y?.altAutoscale) {
+    if (o.y.altAutoscale[0]) opts.push("--alt-autoscale-min");
+    if (o.y.altAutoscale[1]) opts.push("--alt-autoscale-max");
+  }
+  if (o?.y?.noGridFit) opts.push("--no-gridfit");
+  if (o?.y?.formatter) opts.push("--left-axis-formatter", o.y.formatter);
+  if (o?.y?.format) opts.push("--left-axis-format", o.y.format);
+  if (o?.y?.logarithmic) opts.push("--logarithmic");
+  if (o?.y?.unitsExponent) opts.push("--units-exponent", o.y.unitsExponent);
+  if (o?.y?.unitsLength) opts.push("--units-length", o.y.unitsLength);
+  if (o?.y?.siUnits) opts.push("--units=si");
+  if (o?.y?.rightAxis) opts.push("--right-axis", o.y.rightAxis.join(":"));
+  if (o?.y?.rightLabel) opts.push("--right-axis-label", o.y.rightLabel);
+  if (o?.y?.rightFormatter) opts.push("--right-axis-formatter", o.y.rightFormatter);
+  if (o?.y?.rightFormat) opts.push("--right-axis-format", o.y.rightFormat);
+  if (o?.y?.font) opts.push(...font("UNIT", o.y.font));
+  if (o?.y?.base) opts.push("--base", o.y.base);
+
+  return exec(["graph", filename, ...opts]);
+};
 
 const info = async (filename: string): Promise<RrdtoolInfo<any>> => {
   // XXX: --noflush?
@@ -143,6 +210,7 @@ export default {
   create,
   dump,
   fetch,
+  graph,
   info,
   last,
   update,
