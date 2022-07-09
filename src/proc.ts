@@ -9,23 +9,9 @@ class RrdtoolError extends Error {
 
 export type Color = [number, number, number] | [number, number, number, number];
 type ColorTag = "BACK" | "CANVAS" | "SHADEA" | "SHADEB" | "GRID" | "MGRID" | "FONT" | "AXIS" | "FRAME" | "ARROW";
-const color = (type: ColorTag, color: Color): string[] => [
-  "--color",
-  `${type}#${color.map(c => c.toString(16).toUpperCase().padStart(2, "0")).join("")}`
-];
 
 export type Font = string | number | { size: number, name: string };
 type FontTag = "DEFAULT" | "TITLE" | "AXIS" | "UNIT" | "LEGEND" | "WATERMARK";
-const font = (type: FontTag, font: Font): string[] => {
-  let f: { name?: string, size?: number } = {};
-  if (typeof font === "string") f.name = font;
-  else if (typeof font === "number") f.size = font;
-  else f = { ...font };
-  return [
-    "--font",
-    `${type}:${f.size || 0}:${f.name || ""}`
-  ];
-}
 
 export type Unit = "SECOND" | "MINUTE" | "HOUR" | "DAY" | "WEEK" | "MONTH" | "YEAR";
 interface UnitInterval {
@@ -47,9 +33,53 @@ export type XGrid = false | `${Unit}:${number}:${Unit}:${number}:${Unit}:${numbe
 // [grid step, label factor]
 export type YGrid = `${number}:${number}` | [number, number] | false | "alternative";
 
+type Option = `--${string}`;
+class Opts {
+  public res: Argument[] = [];
+
+  public flag(flag: Option, value: boolean | undefined): void {
+    if (!value) return;
+    this.res.push(flag);
+  }
+
+  public form = <T>(option: Option, value: T | undefined, formatter: (v: T) => Argument): void => {
+    if (value === undefined) return;
+    this.res.push(option, formatter(value));
+  }
+
+  public push = (option: Option, v: Argument | undefined): void => this.form(option, v, v => v);
+
+  public color = (type: ColorTag, value: Color | undefined): void => this.form("--color", value, color => `${type}#${color.map(c => c.toString(16).toUpperCase().padStart(2, "0")).join("")}`);
+
+  public font = (type: FontTag, value: Font | undefined): void => this.form("--font", value, font => {
+    let f: { name?: string, size?: number } = {};
+    if (typeof font === "string") f.name = font;
+    else if (typeof font === "number") f.size = font;
+    else f = { ...font };
+    return `${type}:${f.size || 0}:${f.name || ""}`;
+  });
+
+  public xGrid = (value: XGrid | undefined): void => this.form("--x-grid", value, x => {
+    if (x === false) return "none";
+    else if (typeof x === "string") return x;
+    return `${x.base.unit}:${x.base.interval}:${x.major.unit}:${x.major.interval}:${x.labels.unit}:${x.labels.interval}:${x.labels.position}:${x.labels.format}`;
+  });
+
+  public yGrid = (value: YGrid | undefined): void => {
+    if (value === "alternative") return this.flag("--alt-y-grid", true);
+    this.form("--y-grid", value, y => {
+      if (y === false) return "none";
+      if (typeof y === "string") return y;
+      return y.join(":");
+    });
+  }
+}
+
 const exec = async (args: Argument[]): Promise<string> =>
   new Promise((resolve, reject) => {
     const strArgs = args.map(a => a.toString());
+    if (strArgs.find(s => !s)) throw new Error(`Found null argument(s): ${strArgs.map(s => `"${s}"`).join(", ")}`);
+
     const p = child_process.spawn("rrdtool", strArgs, { env: { LANG: "C" } });
 
     const stdout: any[] = [];
@@ -74,17 +104,16 @@ const create = async (
   definitions: RrdtoolDefinition[],
   o?: RrdToolCreateOptions,
 ): Promise<void> => {
-  const opts: Argument[] = [];
+  const opts = new Opts();
 
-  // rrdtool dosen't allow inserting a value onto
-  // the start date. Decrese it by one so we can do that.
-  if (o?.start) opts.push("--start", o.start - 1);
-  if (o?.step) opts.push("--step", o.step);
-  if (!o?.overwrite) opts.push("--no-overwrite");
-  if (o?.templateFile) opts.push("--template", o.templateFile);
-  if (o?.sourceFile) opts.push("--source", o.sourceFile);
+  // rrdtool dosen't allow inserting a value onto the start date, so we decrease it by one so we can do that
+  opts.form("--start", o?.start, v => v - 1);
+  opts.push("--step", o?.step);
+  opts.flag("--no-overwrite", !o?.overwrite); // Opt-out needed
+  opts.push("--template", o?.templateFile);
+  opts.push("--source", o?.sourceFile);
 
-  return exec(["create", filename, ...opts, ...definitions]).then();
+  return exec(["create", filename, ...opts.res, ...definitions]).then();
 };
 
 const dump = async (filename: string): Promise<string> => {
@@ -97,15 +126,15 @@ const fetch = async (
   cf: ConsolidationFunction,
   o?: RrdToolFetchOptions
 ): Promise<RrdtoolDatapoint[]> => {
-  const opts: Argument[] = [];
+  const opts = new Opts();
 
   // rrdtool counts timestamp very strange, hence the -1
-  if (o?.start) opts.push("--start", o.start - 1);
-  if (o?.end) opts.push("--end", o.end - 1);
-  if (o?.resolution) opts.push("--resolution", o.resolution);
-  if (o?.alignStart) opts.push("--align-start");
+  opts.form("--start", o?.start, v => v - 1);
+  opts.form("--end", o?.end, v => v - 1);
+  opts.push("--resolution", o?.resolution);
+  opts.flag("--align-start", o?.alignStart);
 
-  const data = await exec(["fetch", filename, cf, ...opts]);
+  const data = await exec(["fetch", filename, cf, ...opts.res]);
   const rows = data.trim().split("\n");
   const header = rows[0].trim().split(/ +/);
 
@@ -128,54 +157,54 @@ const fetch = async (
 };
 
 const graph = async (filename: string, o?: RrdToolGraphOptions): Promise<string> => {
-  const opts: Argument[] = [];
+  const opts = new Opts();
 
-  if (o?.output?.width) opts.push("--width", o.output.width);
-  if (o?.output?.height) opts.push("--height", o.output.height);
-  if (o?.output?.onlyGraph) opts.push("--only-graph");
-  if (o?.output?.fullSizeMode) opts.push("--full-size-mode");
-  if (o?.output?.format) opts.push("--imgformat", o.output.format);
-  if (o?.output?.interlaced) opts.push("--interlaced");
-  if (o?.output?.lazy) opts.push("--lazy");
-  if (o?.output?.returnStringFormat) opts.push("--imginfo", o.output.returnStringFormat);
+  opts.push("--width", o?.output?.width);
+  opts.push("--height", o?.output?.height);
+  opts.flag("--only-graph", o?.output?.onlyGraph);
+  opts.flag("--full-size-mode", o?.output?.fullSizeMode);
+  opts.push("--imgformat", o?.output?.format);
+  opts.flag("--interlaced", o?.output?.interlaced);
+  opts.flag("--lazy", o?.output?.lazy);
+  opts.push("--imginfo", o?.output?.returnStringFormat);
 
   if (typeof o?.border === "number") opts.push("--border", o.border);
   else {
-    if (o?.border?.width) opts.push("--border", o.border.width);
-    if (o?.border?.colorNW) opts.push(...color("SHADEA", o.border.colorNW));
-    if (o?.border?.colorNW) opts.push(...color("SHADEB", o.border.colorNW));
+    opts.push("--border", o?.border?.width);
+    opts.color("SHADEA", o?.border?.colorNW);
+    opts.color("SHADEB", o?.border?.colorNW);
   }
 
-  if (o?.x?.start) opts.push("--start", o.x.start);
-  if (o?.x?.end) opts.push("--end", o.x.end);
-  if (o?.x?.step) opts.push("--step", o.x.step);
-  if (o?.x?.weekFormat) opts.push("--week-fmt", o.x.weekFormat);
-  if (o?.x?.font) opts.push(...font("AXIS", o.x.font));
+  opts.push("--start", o?.x?.start);
+  opts.push("--end", o?.x?.end);
+  opts.push("--step", o?.x?.step);
+  opts.push("--week-fmt", o?.x?.weekFormat);
+  opts.font("AXIS", o?.x?.font);
 
-  if (o?.y?.label) opts.push("--vertical-label", o.y.label);
-  if (o?.y?.lower) opts.push("--lower-limit", o.y.lower);
-  if (o?.y?.upper) opts.push("--upper-limit", o.y.upper);
-  if (o?.y?.rigid) opts.push("--rigid");
-  if (o?.y?.allowShrink) opts.push("--allow-shrink");
+  opts.push("--vertical-label", o?.y?.label);
+  opts.push("--lower-limit", o?.y?.lower);
+  opts.push("--upper-limit", o?.y?.upper);
+  opts.flag("--rigid", o?.y?.rigid);
+  opts.flag("--allow-shrink", o?.y?.allowShrink);
   if (o?.y?.altAutoscale) {
-    if (o.y.altAutoscale[0]) opts.push("--alt-autoscale-min");
-    if (o.y.altAutoscale[1]) opts.push("--alt-autoscale-max");
+    opts.flag("--alt-autoscale-min", o.y.altAutoscale[0]);
+    opts.flag("--alt-autoscale-max", o.y.altAutoscale[1]);
   }
-  if (o?.y?.noGridFit) opts.push("--no-gridfit");
-  if (o?.y?.formatter) opts.push("--left-axis-formatter", o.y.formatter);
-  if (o?.y?.format) opts.push("--left-axis-format", o.y.format);
-  if (o?.y?.logarithmic) opts.push("--logarithmic");
-  if (o?.y?.unitsExponent) opts.push("--units-exponent", o.y.unitsExponent);
-  if (o?.y?.unitsLength) opts.push("--units-length", o.y.unitsLength);
-  if (o?.y?.siUnits) opts.push("--units=si");
-  if (o?.y?.rightAxis) opts.push("--right-axis", o.y.rightAxis.join(":"));
-  if (o?.y?.rightLabel) opts.push("--right-axis-label", o.y.rightLabel);
-  if (o?.y?.rightFormatter) opts.push("--right-axis-formatter", o.y.rightFormatter);
-  if (o?.y?.rightFormat) opts.push("--right-axis-format", o.y.rightFormat);
-  if (o?.y?.font) opts.push(...font("UNIT", o.y.font));
-  if (o?.y?.base) opts.push("--base", o.y.base);
+  opts.flag("--no-gridfit", o?.y?.noGridFit);
+  opts.push("--left-axis-formatter", o?.y?.formatter);
+  opts.push("--left-axis-format", o?.y?.format);
+  opts.flag("--logarithmic", o?.y?.logarithmic);
+  opts.push("--units-exponent", o?.y?.unitsExponent);
+  opts.push("--units-length", o?.y?.unitsLength);
+  opts.flag("--units=si", o?.y?.siUnits);
+  opts.form("--right-axis", o?.y?.rightAxis, v => typeof v === "string" ? v : v.join(":"));
+  opts.push("--right-axis-label", o?.y?.rightLabel);
+  opts.push("--right-axis-formatter", o?.y?.rightFormatter);
+  opts.push("--right-axis-format", o?.y?.rightFormat);
+  opts.font("UNIT", o?.y?.font);
+  opts.push("--base", o?.y?.base);
 
-  return exec(["graph", filename, ...opts]);
+  return exec(["graph", filename, ...opts.res]);
 };
 
 const info = async (filename: string): Promise<RrdtoolInfo<any>> => {
