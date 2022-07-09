@@ -47,26 +47,6 @@ const exec = async (args: Argument[]): Promise<string> =>
     });
   });
 
-interface InfoDS {
-  name: string;
-  type: string;
-}
-
-interface InfoRRA {
-  cf: string;
-}
-
-export interface Info {
-  ds: InfoDS[];
-  rra: InfoRRA[];
-}
-
-export type Data = Record<string, number>;
-export interface Datapoint {
-  ts: number;
-  values: Data;
-}
-
 const create = async (
   filename: string,
   definitions: RrdtoolDefinition[],
@@ -112,7 +92,7 @@ const fetch = async (
 
     return {
       timestamp: Number(t),
-      values: d.trim().split(/ +/).reduce<Data>((p, c, i) => {
+      values: d.trim().split(/ +/).reduce<Record<string, number>>((p, c, i) => {
         const n = Number(c);
         if (!Number.isNaN(n)) {
           p[header[i]] = n;
