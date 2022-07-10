@@ -2,9 +2,7 @@ import { Color, Font, XGrid, YGrid } from "./proc";
 
 type Timestamp = number;
 
-export interface RrdtoolData {
-  [key: string]: number;
-}
+export type RrdtoolData = Record<string, number>;
 export interface RrdtoolDatapoint<D extends RrdtoolData = any> {
     timestamp: Timestamp;
     values: Partial<D>;
