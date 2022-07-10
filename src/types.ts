@@ -134,6 +134,7 @@ type AxisFormatter = "numeric" | "timestamp" | "duration";
 
 export interface RrdToolGraphOptions {
   output?: {
+    filename?: string;
     width?: number;
     height?: number;
     onlyGraph?: boolean;

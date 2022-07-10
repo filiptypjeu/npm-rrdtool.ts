@@ -156,7 +156,7 @@ const fetch = async (
   return rows.slice(2).map(parseRow);
 };
 
-const graph = async (filename: string, o: RrdToolGraphOptions): Promise<string> => {
+const graph = async (definitions: string[], o: RrdToolGraphOptions): Promise<string> => {
   const opts = new Opts();
 
   opts.push("--width", o.output?.width);
@@ -248,7 +248,12 @@ const graph = async (filename: string, o: RrdToolGraphOptions): Promise<string> 
   opts.flag("--slope-mode", o.graph?.slopeMode);
   opts.flag("--use-nan-for-all-missing-data", o.graph?.useNanForMissingData);
 
-  return exec(["graph", filename, ...opts.res]);
+  return exec([
+     "graph",
+    o.output?.filename || "-",
+    ...opts.res,
+    ...definitions,
+  ]);
 };
 
 const info = async (filename: string): Promise<RrdtoolInfo<any>> => {

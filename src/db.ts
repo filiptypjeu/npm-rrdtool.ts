@@ -26,8 +26,8 @@ export class RrdtoolDatabase<D extends RrdtoolData> extends EventEmitter {
     return this._addToQueue(() => proc.fetch(this.filename, cf, options || {}));
   }
 
-  public async graph(options?: RrdToolGraphOptions): Promise<string> {
-    return this._addToQueue(() => proc.graph(this.filename, options || {}));
+  public async graph(definitions: string[], options?: RrdToolGraphOptions): Promise<string> {
+    return this._addToQueue(() => proc.graph(definitions, options || {}));
   }
 
   public async info(): Promise<RrdtoolInfo<D>> {
