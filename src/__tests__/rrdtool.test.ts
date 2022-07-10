@@ -120,8 +120,8 @@ const print = [
   "VDEF:myvdef=mydef,MAXIMUM",
   "GPRINT:myvdef:%6.2lf %SHELLO",
   "GPRINT:myvdef:%6.2lf %SHELLO",
-    "PRINT:myvdef:%6.2lf %SHELLO",
-    "PRINT:myvdef:%6.2lf %SHELLO",
+  "PRINT:myvdef:%6.2lf %SHELLO",
+  "PRINT:myvdef:%6.2lf %SHELLO",
 ];
 const imageInfoFormat = `<IMG SRC="/img/%s" WIDTH="%lu" HEIGHT="%lu" ALT="Demo">`;
 
@@ -135,7 +135,7 @@ describe("test graph without filename", () => {
     const e = (data: any) => {
       expect(Object.keys(data)).toHaveLength(1);
       expect(data.image).toBeInstanceOf(Buffer);
-    }
+    };
 
     e(await rrdtool.graph(line));
     e(await rrdtool.graph(line, { imageInfoFormat }));

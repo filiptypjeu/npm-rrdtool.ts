@@ -24,9 +24,10 @@ export const create = async <D extends RrdtoolData>(filename: string, definition
   return new RrdtoolDatabase<D>(filename);
 };
 
-type HasImage<T extends RrdToolGraphOptions> = T extends { filename: string } ? {} : Pick<Required<RrdtoolGraphInfo>, "image">;
-type HasImageInfo<T extends RrdToolGraphOptions> = T extends { imageInfoFormat: string } ? Pick<Required<RrdtoolGraphInfo>, "image_info"> : {};
-type HasHW<T extends RrdToolGraphOptions> = T extends { verbose: true } ? Pick<Required<RrdtoolGraphInfo>, "image_width" | "image_height"> : T extends { imageInfoFormat: string } ? {} : Pick<Required<RrdtoolGraphInfo>, "image_width" | "image_height">;
+type Null = Record<string, never>;
+type HasImage<T extends RrdToolGraphOptions> = T extends { filename: string } ? Null : Pick<Required<RrdtoolGraphInfo>, "image">;
+type HasImageInfo<T extends RrdToolGraphOptions> = T extends { imageInfoFormat: string } ? Pick<Required<RrdtoolGraphInfo>, "image_info"> : Null;
+type HasHW<T extends RrdToolGraphOptions> = T extends { verbose: true } ? Pick<Required<RrdtoolGraphInfo>, "image_width" | "image_height"> : T extends { imageInfoFormat: string } ? Null : Pick<Required<RrdtoolGraphInfo>, "image_width" | "image_height">;
 type Print = Pick<RrdtoolGraphInfo, "print">; // XXX: Is actually known
 type GPrint = Pick<RrdtoolGraphInfo, "legend" | "coords">; // XXX: Is actually known
 type Rest = Omit<RrdtoolGraphInfo, "image" | "image_info" | "image_width" | "image_height" | "print" | "legend" | "coords">;
@@ -38,11 +39,12 @@ export const graph = async <T extends RrdToolGraphOptions>(definitions: string[]
 }
 
 type Value = number | string;
+type ValueExtended = Value | Info | ValueExtended[];
 interface Info {
-  [key: string]: Value | Info | Value[] | Info[] | undefined;
+  [key: string]: ValueExtended | undefined;
 }
 export const parse = (str: string): Info => {
-  const obj = (props: string[], value: Value): any => {
+  const obj = (props: string[], value: Value): ValueExtended => {
     if (props.length === 0) return value;
 
     const name = props[0];
@@ -50,7 +52,7 @@ export const parse = (str: string): Info => {
     const v = props.length === 1 ? value : obj(props.slice(1), value);
 
     if (Number.isNaN(index)) {
-      const o: any = {};
+      const o: Info = {};
       o[name] = v;
       return o;
     } else {

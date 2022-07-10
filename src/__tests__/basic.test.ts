@@ -10,7 +10,7 @@ const randomValues = (n: number) => {
   }
 
   return values;
-}
+};
 
 const p = path.join(__dirname, "temp.rrd");
 const start = 1405942000;
@@ -19,19 +19,13 @@ describe("tests on temporary databases", () => {
   afterEach(() => fs.unlinkSync(p));
 
   test("create", async () => {
-    const db = await rrdtool.create(p, [
-      "DS:test:GAUGE:1:0:100",
-      "RRA:AVERAGE:0:1:10",
-    ]);
+    const db = await rrdtool.create(p, ["DS:test:GAUGE:1:0:100", "RRA:AVERAGE:0:1:10"]);
 
     expect(db).toBeTruthy();
   });
 
   test("update verbose", async () => {
-    const db = await rrdtool.create<{ test: number }>(p, [
-      "DS:test:GAUGE:1:0:100",
-      "RRA:AVERAGE:0:1:10",
-    ], { start, step: 1 });
+    const db = await rrdtool.create<{ test: number }>(p, ["DS:test:GAUGE:1:0:100", "RRA:AVERAGE:0:1:10"], { start, step: 1 });
 
     const s = await db.update({ test: 42 }, { timestamp: start, verbose: true });
     const a = s.trim().split("\n");
@@ -42,10 +36,7 @@ describe("tests on temporary databases", () => {
   });
 
   test("update and fetch 10 values", async () => {
-    const db = await rrdtool.create<{ test: number }>(p, [
-      "DS:test:GAUGE:1:0:100",
-      "RRA:AVERAGE:0:1:10",
-    ], { start, step: 1 });
+    const db = await rrdtool.create<{ test: number }>(p, ["DS:test:GAUGE:1:0:100", "RRA:AVERAGE:0:1:10"], { start, step: 1 });
 
     const data = randomValues(10).map((v, i) => ({ timestamp: start + i, values: { test: v } }));
 
@@ -62,11 +53,10 @@ describe("tests on temporary databases", () => {
   });
 
   test("update and fetch an average over 20 seconds", async () => {
-    const db = await rrdtool.create<{ test: number }>(p, [
-      "DS:test:GAUGE:1:0:100",
-      "RRA:AVERAGE:0:1:20",
-      "RRA:AVERAGE:0:20:1",
-    ], { start, step: 1 });
+    const db = await rrdtool.create<{ test: number }>(p, ["DS:test:GAUGE:1:0:100", "RRA:AVERAGE:0:1:20", "RRA:AVERAGE:0:20:1"], {
+      start,
+      step: 1,
+    });
 
     const data = randomValues(21).map((v, i) => ({ timestamp: start + i, values: { test: v } }));
 
@@ -80,11 +70,7 @@ describe("tests on temporary databases", () => {
   });
 
   test("update and fetch with two data sources", async () => {
-    const db = await rrdtool.create(p, [
-      "DS:test1:GAUGE:1:0:100",
-      "DS:test2:GAUGE:1:0:100",
-      "RRA:AVERAGE:0:1:10",
-    ], { start, step: 1 });
+    const db = await rrdtool.create(p, ["DS:test1:GAUGE:1:0:100", "DS:test2:GAUGE:1:0:100", "RRA:AVERAGE:0:1:10"], { start, step: 1 });
 
     const data1 = randomValues(10);
     const data2 = randomValues(10);
@@ -93,7 +79,7 @@ describe("tests on temporary databases", () => {
       values: {
         test1: v,
         test2: data2[i],
-      }
+      },
     }));
     data;
 
@@ -103,24 +89,22 @@ describe("tests on temporary databases", () => {
 
     const result = await db.fetch("AVERAGE", { start, end: start + 9 });
     expect(result).toEqual(data);
-
   });
 
   test("update with default timestamp", async () => {
     const t = rrdtool.now();
 
-    const db = await rrdtool.create <{ test: number }>(p, [
-      "DS:test:GAUGE:1:0:100",
-      "RRA:AVERAGE:0.99:1:10",
-    ], { step: 1 });
+    const db = await rrdtool.create<{ test: number }>(p, ["DS:test:GAUGE:1:0:100", "RRA:AVERAGE:0.99:1:10"], { step: 1 });
 
     await db.update({ test: 42 }, { timestamp: t - 1 });
     await db.update({ test: 42 });
 
     const result = await db.fetch("AVERAGE", { start: t, end: t });
-    expect(result).toEqual([{
-      timestamp: t,
-      values: { test: 42 },
-    }]);
+    expect(result).toEqual([
+      {
+        timestamp: t,
+        values: { test: 42 },
+      },
+    ]);
   });
 });

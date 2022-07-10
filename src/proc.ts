@@ -232,8 +232,8 @@ const graph = async (definitions: string[], o: RrdToolGraphOptions): Promise<Rrd
   if (o.legend === false) opts.flag("--no-legend", true);
   else {
     opts.flag("--force-rules-legend", o.legend?.forceRulesLegend);
-    opts.flag(`--legend-position=${o.legend?.position}`, o.legend?.position && true);
-    opts.flag(`--legend-direction=${o.legend?.direction}`, o.legend?.direction && true);
+    if (o.legend?.position) opts.flag(`--legend-position=${o.legend.position}`, true);
+    if (o.legend?.direction) opts.flag(`--legend-direction=${o.legend.direction}`, true);
     opts.color("FRAME", o.legend?.iconFrameColor);
     opts.font("LEGEND", o.legend?.font);
     opts.flag("--dynamic-labels", o.legend?.dynamicIcons);
@@ -266,7 +266,7 @@ const graph = async (definitions: string[], o: RrdToolGraphOptions): Promise<Rrd
     ...definitions,
   ]);
 
-  let output: RrdtoolGraphInfo = {};
+  const output: RrdtoolGraphInfo = {};
 
   // If no filename is provided the image data will be printed to stdout in one way or another
   if (filename === "-") {
