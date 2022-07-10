@@ -1,7 +1,7 @@
 import merge from "lodash/merge";
 import { RrdtoolDatabase } from "./db";
 import proc from "./proc";
-import { RrdToolCreateOptions, RrdtoolData, RrdtoolDefinition, RrdToolGraphOptions } from "./types";
+import { RrdToolCreateOptions, RrdtoolData, RrdtoolDefinition, RrdtoolGraphInfo, RrdToolGraphOptions } from "./types";
 import fs from "fs";
 
 export const now = () => {
@@ -24,7 +24,7 @@ export const create = async <D extends RrdtoolData>(filename: string, definition
   return new RrdtoolDatabase<D>(filename);
 };
 
-export const graph = async (definitions: string[], options?: RrdToolGraphOptions): Promise<string> => {
+export const graph = async (definitions: string[], options?: RrdToolGraphOptions): Promise<RrdtoolGraphInfo> => {
   return proc.graph(definitions, options || {});
 }
 

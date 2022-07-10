@@ -1,5 +1,5 @@
 import child_process from "child_process";
-import { ConsolidationFunction, RrdToolCreateOptions, RrdtoolData, RrdtoolDatapoint, RrdtoolDefinition, RrdToolFetchOptions, RrdToolGraphOptions, RrdtoolInfo, RrdToolUpdateOptions } from "./types";
+import { ConsolidationFunction, RrdToolCreateOptions, RrdtoolData, RrdtoolDatapoint, RrdtoolDefinition, RrdToolFetchOptions, RrdtoolGraphInfo, RrdToolGraphOptions, RrdtoolInfo, RrdToolUpdateOptions } from "./types";
 import { now, parse } from "./util";
 
 type Argument = string | number;
@@ -156,7 +156,7 @@ const fetch = async (
   return rows.slice(2).map(parseRow);
 };
 
-const graph = async (definitions: string[], o: RrdToolGraphOptions): Promise<string> => {
+const graph = async (definitions: string[], o: RrdToolGraphOptions): Promise<RrdtoolGraphInfo> => {
   const opts = new Opts();
 
   opts.push("--width", o.output?.width);
@@ -248,12 +248,40 @@ const graph = async (definitions: string[], o: RrdToolGraphOptions): Promise<str
   opts.flag("--slope-mode", o.graph?.slopeMode);
   opts.flag("--use-nan-for-all-missing-data", o.graph?.useNanForMissingData);
 
-  return exec([
+  const filename = o.output?.filename || "-";
+
+  let result = await exec([
     o.verbose ? "graphv" : "graph",
-    o.output?.filename || "-",
+    filename,
     ...opts.res,
     ...definitions,
   ]);
+
+  let output: RrdtoolGraphInfo = {};
+
+  // If no filename is provided the image data will be printed to stdout in one way or another
+  if (filename === "-") {
+    if (!o.verbose) return { image: Buffer.from(result) };
+    const split = result.split(/image = BLOB_SIZE:(\d+)\n/);
+    output.image = Buffer.from(split[1]);
+    result = split[0];
+  }
+
+  // If verbose, then the rest of the info can be gotten with the parser
+  if (o.verbose) {
+    return { ...parse(result), ...output };
+  }
+
+  const printed = result.trim().split("\n");
+  const first = printed.shift();
+  if (o.output?.returnStringFormat) output.image_info = first;
+  else {
+    output.image_width = Number(first?.split("x")[0]) || undefined;
+    output.image_height = Number(first?.split("x")[1]) || undefined;
+  }
+  if (printed.length) output.print = printed;
+
+  return output;
 };
 
 const info = async (filename: string): Promise<RrdtoolInfo<any>> => {

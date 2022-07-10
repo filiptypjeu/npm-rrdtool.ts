@@ -122,6 +122,27 @@ export interface RrdtoolInfo<D extends RrdtoolData = any> {
   }[];
 }
 
+type Coord = `${number}:${number}:${number}:${number}`;
+
+// XXX: Probably incomplete
+export interface RrdtoolGraphInfo {
+  print?: string[];
+  graph_left?: number;
+  graph_top?: number;
+  graph_width?: number;
+  graph_height?: number;
+  image_width?: number;
+  image_height?: number;
+  graph_start?: number;
+  graph_end?: number;
+  value_min?: number;
+  value_max?: number;
+  legend?: string[];
+  coords?: Coord[];
+  image_info?: string;
+  image?: Buffer;
+}
+
 export interface RrdToolCreateOptions {
   start?: Timestamp;
   step?: Duration;
