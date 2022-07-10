@@ -8,8 +8,12 @@ This is a wrapper for `rrdtool` written in TypeScript. Inspired by the `rrdtool`
 ```ts
 import rrdtool from "rrdtool.ts";
 
+interface MyData {
+  test: number;
+};
+
 const start = rrdtool.now() - 10;
-const db = await rrdtool.create("test.rrd", { start, step: 1 }, [
+const db = await rrdtool.create<MyData>("test.rrd", { start, step: 1 }, [
   "DS:test:GAUGE:1:0:100",
   "RRA:AVERAGE:0.5:1:10"
 ]);
@@ -25,9 +29,47 @@ db.update({ test: 55 }, { timestamp: start + 7 });
 db.update({ test: 75 }, { timestamp: start + 8 });
 db.update({ test: 25 }, { timestamp: start + 9 });
 
-db.fetch("AVERAGE", start, start + 9, (err, data) => {
-  if (err) { throw err; }
-  console.log(data);
+const data = await db.fetch("AVERAGE", { start, end: start + 9});
+const info = await db.info();
+const graphInfo = await rrdtool.graph([
+  "DEF:mydef=test.rrd:test:AVERAGE",
+  "LINE2:mydef",
+  "VDEF:myvdef=mydef,MAXIMUM",
+  "PRINT:myvdef:Maximum\\: %6.2lf",
+], {
+  filename: "test.png",
+  verbose: true,
+  image: {
+    width: 500,
+    height: 300,
+    backgroundColor: [10, 10, 10],
+  },
+  border: 3,
+  x: {
+    start,
+    end: start + 20,
+  },
+  y: {
+    label: "My vertical label",
+  },
+  text: {
+    color: [255, 0, 255],
+    defaultFont: 10,
+  },
+  grid: {
+    axisColor: [0, 0, 255],
+    arrowColor: [0, 255, 0],
+    baseColor: [150, 150, 150],
+    majorColor: [50, 50, 50],
+  },
+  graph: {
+    canvasColor: [255, 255, 255],
+  },
+  title: {
+    text: "My title",
+    font: 20,
+  },
+  watermark: "My watermark",
 });
 ```
 
@@ -35,43 +77,48 @@ db.fetch("AVERAGE", start, start + 9, (err, data) => {
 
 ### rrdtool
 
-#### `.create(file, opts, args)`
+#### `create<D>(filename: string, definitions: RrdtoolDefinition[], options?: RrdToolCreateOptions): Promise<RrdtoolDatabase<D>>`
 
 Creates a new database.
+ - `filename`: Path where to save the database
+ - `definitions`: Configure the data sources and the round-robin archives
+ - `options`: Options
+See https://oss.oetiker.ch/rrdtool/doc/rrdcreate.en.html
 
- - `file`: Filename where to save the db
- - `opts`
-   - `step`: Seconds between each update
-   - `start`: Unix timestamp of the first data point
-   - `force`: Overwrite file if it exists
- - `args`: Array of Data Sources and Round Robin Archives
-
-#### `.open(file)`
+#### `open<D>(filename: string): RrdtoolDatabase<D>`
 
 Loads an existing database.
+ - `filename`: Path to the db
 
- - `file`: Filename of the db
+#### `graph(definitions: string[], options?: RrdToolGraphOptions): Promise<RrdToolGraphInfo>`
 
-#### `.now()`
+Creates a new database.
+ - `definitions`: Configure variable definitions among other things
+ - `options`: Options
+See https://oss.oetiker.ch/rrdtool/doc/rrdgraph.en.html
+
+#### `now()`
 
 Returns the current unix timestamp
 
-### DB
+### RrdtoolDatabase<D>
 
-#### `.update([ts, ]values[, cb])`
+#### `.update(values: Partial<D>, options?: RrdToolUpdateOptions`
 
 Insert data into the database.
+ - `values`: The values to insert
+ - `options`: Options
+See https://oss.oetiker.ch/rrdtool/doc/rrdupdate.en.html
 
- - `ts`: Unix timestamp of the data
- - `values`: Object with one entry per data source to insert into
- - `cb`: Callback to call when the data is inserted `(err)`
+#### `.fetch(cf: ConsolidationFunction, options?: RrdToolFetchOptions): Promise<RrdtoolDatapoint<D>[]>`
 
-#### `.fetch(cf, start, stop[, res], cb)`
+Fetch data from the database.
+ - `cf`: Consolidation function
+ - `options`: Options
+See https://oss.oetiker.ch/rrdtool/doc/rrdfetch.en.html
 
-Fetch a span of data from the database.
+#### `.info(): Promise<RrdtoolInfo[]>` and `.dump(): Promise<string>`
 
- - `cf`: Consolidation function (`AVERAGE`, `MIN`, `MAX`, `LAST`)
- - `start`: Unix timestamp from where to start
- - `stop`: Unix timestamp of which to stop at
- - `res`: Resolution of the data, specified in seconds
- - `cb`: Callback to call when the data is ready `(err, data)`
+Get various data from database.
+See https://oss.oetiker.ch/rrdtool/doc/rrdinfo.en.html
+and https://oss.oetiker.ch/rrdtool/doc/rrddump.en.html

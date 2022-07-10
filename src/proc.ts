@@ -14,7 +14,7 @@ class RrdtoolError extends Error {
     public override name = "RrdtoolError";
 }
 
-export type Color = [number, number, number] | [number, number, number, number];
+export type Color = [number, number, number] | [number, number, number, number] | string;
 type ColorTag = "BACK" | "CANVAS" | "SHADEA" | "SHADEB" | "GRID" | "MGRID" | "FONT" | "AXIS" | "FRAME" | "ARROW";
 
 export type Font = string | number | { size: number, name: string };
@@ -56,7 +56,7 @@ class Opts {
 
   public push = (option: Option, v: Argument | undefined): void => this.form(option, v, v => v);
 
-  public color = (type: ColorTag, value: Color | undefined): void => this.form("--color", value, color => `${type}#${color.map(c => c.toString(16).toUpperCase().padStart(2, "0")).join("")}`);
+  public color = (type: ColorTag, value: Color | undefined): void => this.form("--color", value, color => `${type}#${typeof color === "string" ? color : color.map(c => c.toString(16).toUpperCase().padStart(2, "0")).join("")}`);
 
   public font = (type: FontTag, value: Font | undefined): void => this.form("--font", value, font => {
     let f: { name?: string, size?: number } = {};

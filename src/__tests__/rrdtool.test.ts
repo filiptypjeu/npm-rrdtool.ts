@@ -115,12 +115,12 @@ describe("tests on static database", () => {
   });
 });
 
-const line = [`DEF:mydef=${p}:test:AVERAGE`, "LINE2:mydef"];
+const line = [`DEF:mydef=${p}:test:AVERAGE`, "LINE2:mydef#FF0000"];
 const print = [
   "VDEF:myvdef=mydef,MAXIMUM",
   "GPRINT:myvdef:%6.2lf %SHELLO",
   "GPRINT:myvdef:%6.2lf %SHELLO",
-  "PRINT:myvdef:%6.2lf %SHELLO",
+  "PRINT:myvdef:Maximum\\: %6.2lf",
   "PRINT:myvdef:%6.2lf %SHELLO",
 ];
 const imageInfoFormat = `<IMG SRC="/img/%s" WIDTH="%lu" HEIGHT="%lu" ALT="Demo">`;
@@ -235,5 +235,45 @@ describe("test graph with filename", () => {
     expect(data.coords).toHaveLength(2);
     expect((data as any).image).toBe(undefined);
     expect(data.image_info).toContain(`<IMG SRC="/img/`);
+  });
+});
+
+test("graph test more options", async () => {
+  const f = path.join(__dirname, "test.png");
+
+  await rrdtool.graph(line.concat(print), {
+    filename: f,
+    verbose: true,
+    image: {
+      width: 500,
+      height: 300,
+      backgroundColor: [10, 10, 10],
+    },
+    border: 3,
+    x: {
+      start,
+      end: start + 20,
+    },
+    y: {
+      label: "My vertical label",
+    },
+    text: {
+      color: [255, 0, 255],
+      defaultFont: 10,
+    },
+    grid: {
+      axisColor: [0, 0, 255],
+      arrowColor: [0, 255, 0],
+      baseColor: [150, 150, 150],
+      majorColor: [50, 50, 50],
+    },
+    graph: {
+      canvasColor: [255, 255, 255],
+    },
+    title: {
+      text: "My title",
+      font: 20,
+    },
+    watermark: "My watermark",
   });
 });
