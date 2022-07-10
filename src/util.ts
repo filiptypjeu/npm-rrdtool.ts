@@ -24,8 +24,17 @@ export const create = async <D extends RrdtoolData>(filename: string, definition
   return new RrdtoolDatabase<D>(filename);
 };
 
-export const graph = async (definitions: string[], options?: RrdToolGraphOptions): Promise<RrdtoolGraphInfo> => {
-  return proc.graph(definitions, options || {});
+type HasImage<T extends RrdToolGraphOptions> = T extends { output: { filename: string } } ? {} : Pick<Required<RrdtoolGraphInfo>, "image">;
+type HasImageInfo<T extends RrdToolGraphOptions> = T extends { output: { returnStringFormat: string } } ? Pick<Required<RrdtoolGraphInfo>, "image_info"> : {};
+type HasHW<T extends RrdToolGraphOptions> = T extends { verbose: true } ? Pick<Required<RrdtoolGraphInfo>, "image_width" | "image_height"> : T extends { output: { returnStringFormat: string } } ? {} : Pick<Required<RrdtoolGraphInfo>, "image_width" | "image_height">;
+type Print = Pick<RrdtoolGraphInfo, "print">; // XXX: Is actually known
+type GPrint = Pick<RrdtoolGraphInfo, "legend" | "coords">; // XXX: Is actually known
+type Rest = Omit<RrdtoolGraphInfo, "image" | "image_info" | "image_width" | "image_height" | "print" | "legend" | "coords">;
+type HasRest<T extends RrdToolGraphOptions> = T extends { verbose: true } ? Print & GPrint & Required<Rest> : Print;
+type GraphInfo<T extends RrdToolGraphOptions> = HasImage<T> & HasImageInfo<T> & HasHW<T> & HasRest<T>;
+
+export const graph = async <T extends RrdToolGraphOptions>(definitions: string[], options?: T): Promise<GraphInfo<T>> => {
+  return proc.graph(definitions, options || {}) as any;
 }
 
 type Value = number | string;

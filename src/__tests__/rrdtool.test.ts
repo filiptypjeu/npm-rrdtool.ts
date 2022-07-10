@@ -150,7 +150,7 @@ describe("test graph without filename", () => {
     expect(data.legend).toBe(undefined);
     expect(data.coords).toBe(undefined);
     expect(data.image).toBeInstanceOf(Buffer);
-    expect(data.image_info).toBe(undefined);
+    expect((data as any).image_info).toBe(undefined);
   });
 
   test("graph xx--", async () => {
@@ -170,7 +170,7 @@ describe("test graph without filename", () => {
     expect(data.legend).toHaveLength(2);
     expect(data.coords).toHaveLength(2);
     expect(data.image).toBeInstanceOf(Buffer);
-    expect(data.image_info).toBe(undefined);
+    expect((data as any).image_info).toBe(undefined);
   });
 
   test("graph xxx-", async () => {
@@ -223,8 +223,8 @@ describe("test graph with filename", () => {
     expect(data.print).toBe(undefined);
     expect(data.legend).toBe(undefined);
     expect(data.coords).toBe(undefined);
-    expect(data.image).toBe(undefined);
-    expect(data.image_info).toBe(undefined);
+    expect((data as any).image).toBe(undefined);
+    expect((data as any).image_info).toBe(undefined);
   });
 
   test("graph xxxx", async () => {
@@ -233,7 +233,7 @@ describe("test graph with filename", () => {
     expect(data.print).toHaveLength(2);
     expect(data.legend).toHaveLength(2);
     expect(data.coords).toHaveLength(2);
-    expect(data.image).toBe(undefined);
+    expect((data as any).image).toBe(undefined);
     expect(data.image_info).toContain(`<IMG SRC="/img/`);
   });
 });
