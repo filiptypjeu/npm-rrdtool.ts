@@ -81,7 +81,7 @@ describe("tests on static database", () => {
 
   test("fetch no arguments", async () => {
     const data = await db.fetch("AVERAGE");
-    expect(data).toHaveLength(60*60*24 + 1);
+    expect(data).toHaveLength(60 * 60 * 24 + 1);
   });
 
   test("fetch start and end", async () => {
@@ -118,15 +118,15 @@ describe("tests on static database", () => {
 const line = [`DEF:mydef=${p}:test:AVERAGE`, "LINE2:mydef"];
 const print = [
   "VDEF:myvdef=mydef,MAXIMUM",
-  `GPRINT:myvdef:"%6.2lf %SHELLO"`,
-  `GPRINT:myvdef:"%6.2lf %SHELLO"`,
-    `PRINT:myvdef:"%6.2lf %SHELLO"`,
-    `PRINT:myvdef:"%6.2lf %SHELLO"`,
+  "GPRINT:myvdef:%6.2lf %SHELLO",
+  "GPRINT:myvdef:%6.2lf %SHELLO",
+    "PRINT:myvdef:%6.2lf %SHELLO",
+    "PRINT:myvdef:%6.2lf %SHELLO",
 ];
-const returnStringFormat = `<IMG SRC="/img/%s" WIDTH="%lu" HEIGHT="%lu" ALT="Demo">`;
+const imageInfoFormat = `<IMG SRC="/img/%s" WIDTH="%lu" HEIGHT="%lu" ALT="Demo">`;
 
 // 1 = verbose
-// 2 = returnStringFormat
+// 2 = imageInfoFormat
 // 3 = PRINT
 // 4 = filename
 
@@ -138,12 +138,12 @@ describe("test graph without filename", () => {
     }
 
     e(await rrdtool.graph(line));
-    e(await rrdtool.graph(line, { output: { returnStringFormat }}));
+    e(await rrdtool.graph(line, { imageInfoFormat }));
     e(await rrdtool.graph(line.concat(print)));
-    e(await rrdtool.graph(line.concat(print), { output: { returnStringFormat }}));
+    e(await rrdtool.graph(line.concat(print), { imageInfoFormat }));
   });
 
-  test("graph x---", async () => {
+  test("graph +---", async () => {
     const data = await rrdtool.graph(line, { verbose: true });
     expect(Object.keys(data)).toHaveLength(11);
     expect(data.print).toBe(undefined);
@@ -153,8 +153,8 @@ describe("test graph without filename", () => {
     expect((data as any).image_info).toBe(undefined);
   });
 
-  test("graph xx--", async () => {
-    const data = await rrdtool.graph(line, { verbose: true, output: { returnStringFormat } });
+  test("graph ++--", async () => {
+    const data = await rrdtool.graph(line, { verbose: true, imageInfoFormat });
     expect(Object.keys(data)).toHaveLength(12);
     expect(data.print).toBe(undefined);
     expect(data.legend).toBe(undefined);
@@ -163,7 +163,7 @@ describe("test graph without filename", () => {
     expect(data.image_info).toContain(`<IMG SRC="/img/`);
   });
 
-  test("graph x-x-", async () => {
+  test("graph +-+-", async () => {
     const data = await rrdtool.graph(line.concat(print), { verbose: true });
     expect(Object.keys(data)).toHaveLength(14);
     expect(data.print).toHaveLength(2);
@@ -173,8 +173,8 @@ describe("test graph without filename", () => {
     expect((data as any).image_info).toBe(undefined);
   });
 
-  test("graph xxx-", async () => {
-    const data = await rrdtool.graph(line.concat(print), { verbose: true, output: { returnStringFormat } });
+  test("graph +++-", async () => {
+    const data = await rrdtool.graph(line.concat(print), { verbose: true, imageInfoFormat });
     expect(Object.keys(data)).toHaveLength(15);
     expect(data.print).toHaveLength(2);
     expect(data.legend).toHaveLength(2);
@@ -189,36 +189,36 @@ describe("test graph with filename", () => {
 
   afterEach(() => fs.unlinkSync(f));
 
-  test("graph ---x", async () => {
-    const data = await rrdtool.graph(line, { output: { filename: f } });
+  test("graph ---+", async () => {
+    const data = await rrdtool.graph(line, { filename: f });
     expect(Object.keys(data)).toHaveLength(2);
     expect(data.image_width).toBe(481);
     expect(data.image_height).toBe(141);
   });
 
-  test("graph -x-x", async () => {
-    const data = await rrdtool.graph(line, { output: { filename: f, returnStringFormat } });
+  test("graph -+-+", async () => {
+    const data = await rrdtool.graph(line, { filename: f, imageInfoFormat });
     expect(Object.keys(data)).toHaveLength(1);
     expect(data.image_info).toContain(`<IMG SRC="/img/`);
   });
 
-  test("graph --xx", async () => {
-    const data = await rrdtool.graph(line.concat(print), { output: { filename: f } });
+  test("graph --++", async () => {
+    const data = await rrdtool.graph(line.concat(print), { filename: f });
     expect(Object.keys(data)).toHaveLength(3);
     expect(data.image_width).toBe(481);
     expect(data.image_height).toBe(155);
     expect(data.print).toHaveLength(2);
   });
 
-  test("graph -xxx", async () => {
-    const data = await rrdtool.graph(line.concat(print), { output: { filename: f, returnStringFormat } });
+  test("graph -+++", async () => {
+    const data = await rrdtool.graph(line.concat(print), { filename: f, imageInfoFormat });
     expect(Object.keys(data)).toHaveLength(2);
     expect(data.image_info).toContain(`<IMG SRC="/img/`);
     expect(data.print).toHaveLength(2);
   });
 
-  test("graph x--x", async () => {
-    const data = await rrdtool.graph(line, { verbose: true, output: { filename: f } });
+  test("graph +--+", async () => {
+    const data = await rrdtool.graph(line, { verbose: true, filename: f });
     expect(Object.keys(data)).toHaveLength(10);
     expect(data.print).toBe(undefined);
     expect(data.legend).toBe(undefined);
@@ -227,8 +227,8 @@ describe("test graph with filename", () => {
     expect((data as any).image_info).toBe(undefined);
   });
 
-  test("graph xxxx", async () => {
-    const data = await rrdtool.graph(line.concat(print), { verbose: true, output: { filename: f, returnStringFormat } });
+  test("graph ++++", async () => {
+    const data = await rrdtool.graph(line.concat(print), { verbose: true, filename: f, imageInfoFormat });
     expect(Object.keys(data)).toHaveLength(14);
     expect(data.print).toHaveLength(2);
     expect(data.legend).toHaveLength(2);

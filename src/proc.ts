@@ -2,6 +2,13 @@ import child_process from "child_process";
 import { ConsolidationFunction, RrdToolCreateOptions, RrdtoolData, RrdtoolDatapoint, RrdtoolDefinition, RrdToolFetchOptions, RrdtoolGraphInfo, RrdToolGraphOptions, RrdtoolInfo, RrdToolUpdateOptions } from "./types";
 import { now, parse } from "./util";
 
+// XXX: Add --deamon option to all commands?
+// XXX: Add proper typing to graph() definitions strings (or parser?)
+// XXX: Does the format string in PRINT and GPRINT actually not need to be quoted?
+// XXX: How does child_process.spawn actually handle quoting of arguments? It seems like it automatically quotes arguments if there is for example a space in it?
+// XXX: Add more rrdtool commands? lastUpdate() might be the first candidate?
+// XXX: Better file structure?
+
 type Argument = string | number;
 class RrdtoolError extends Error {
     public override name = "RrdtoolError";
@@ -56,6 +63,7 @@ class Opts {
     if (typeof font === "string") f.name = font;
     else if (typeof font === "number") f.size = font;
     else f = { ...font };
+     // XXX: Need to be quoted if there is a space in the font name, but I think
     return `${type}:${f.size || 0}:${f.name || ""}`;
   });
 
@@ -159,14 +167,16 @@ const fetch = async (
 const graph = async (definitions: string[], o: RrdToolGraphOptions): Promise<RrdtoolGraphInfo> => {
   const opts = new Opts();
 
-  opts.push("--width", o.output?.width);
-  opts.push("--height", o.output?.height);
-  opts.flag("--only-graph", o.output?.onlyGraph);
-  opts.flag("--full-size-mode", o.output?.fullSizeMode);
-  opts.push("--imgformat", o.output?.format);
-  opts.flag("--interlaced", o.output?.interlaced);
-  opts.flag("--lazy", o.output?.lazy);
-  opts.push("--imginfo", o.output?.returnStringFormat);
+  opts.push("--imginfo", o.imageInfoFormat);
+
+  opts.push("--width", o.image?.width);
+  opts.push("--height", o.image?.height);
+  opts.flag("--only-graph", o.image?.onlyGraph);
+  opts.flag("--full-size-mode", o.image?.fullSizeMode);
+  opts.flag("--lazy", o.image?.lazy);
+  opts.color("BACK", o.image?.backgroundColor);
+  opts.push("--imgformat", o.image?.format);
+  opts.flag("--interlaced", o.image?.interlaced);
 
   if (typeof o.border === "number") opts.push("--border", o.border);
   else {
@@ -211,7 +221,7 @@ const graph = async (definitions: string[], o: RrdToolGraphOptions): Promise<Rrd
   opts.color("AXIS", o.grid?.axisColor);
   opts.color("ARROW", o.grid?.arrowColor);
   opts.form("--grid-dash", o.grid?.dashed, v => v.join(":"));
-  
+
   opts.color("FONT", o.text?.color);
   opts.font("DEFAULT", o.text?.defaultFont);
   opts.push("--font-render-mode", o.text?.fontRenderMode);
@@ -222,8 +232,8 @@ const graph = async (definitions: string[], o: RrdToolGraphOptions): Promise<Rrd
   if (o.legend === false) opts.flag("--no-legend", true);
   else {
     opts.flag("--force-rules-legend", o.legend?.forceRulesLegend);
-    // opts.flag(`--legend-position=${o.legend?.position}`, o.legend?.position);
-    // opts.flag(`--legend-direction=${o.legend?.direction}`, o.legend?.direction);
+    opts.flag(`--legend-position=${o.legend?.position}`, o.legend?.position && true);
+    opts.flag(`--legend-direction=${o.legend?.direction}`, o.legend?.direction && true);
     opts.color("FRAME", o.legend?.iconFrameColor);
     opts.font("LEGEND", o.legend?.font);
     opts.flag("--dynamic-labels", o.legend?.dynamicIcons);
@@ -241,14 +251,13 @@ const graph = async (definitions: string[], o: RrdToolGraphOptions): Promise<Rrd
     opts.font("WATERMARK", o.watermark?.font);
   }
 
-  opts.color("BACK", o.graph?.backgroundColor);
   opts.color("CANVAS", o.graph?.canvasColor);
   opts.push("--zoom", o.graph?.zoomFactor);
   opts.push("--graph-render-mode", o.graph?.renderMode);
   opts.flag("--slope-mode", o.graph?.slopeMode);
   opts.flag("--use-nan-for-all-missing-data", o.graph?.useNanForMissingData);
 
-  const filename = o.output?.filename || "-";
+  const filename = o.filename || "-";
 
   let result = await exec([
     o.verbose ? "graphv" : "graph",
@@ -274,7 +283,7 @@ const graph = async (definitions: string[], o: RrdToolGraphOptions): Promise<Rrd
 
   const printed = result.trim().split("\n");
   const first = printed.shift();
-  if (o.output?.returnStringFormat) output.image_info = first;
+  if (o.imageInfoFormat) output.image_info = first;
   else {
     output.image_width = Number(first?.split("x")[0]) || undefined;
     output.image_height = Number(first?.split("x")[1]) || undefined;
@@ -306,8 +315,6 @@ const info = async (filename: string): Promise<RrdtoolInfo<any>> => {
 const last = async (filename: string): Promise<number> => {
   return Number(await exec(["last", filename]));
 };
-
-// XXX: lastUpdate
 
 const update = async (filename: string, values: Partial<RrdtoolData>, o: RrdToolUpdateOptions): Promise<string> => {
   const template: string[] = [];

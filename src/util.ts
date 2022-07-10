@@ -24,9 +24,9 @@ export const create = async <D extends RrdtoolData>(filename: string, definition
   return new RrdtoolDatabase<D>(filename);
 };
 
-type HasImage<T extends RrdToolGraphOptions> = T extends { output: { filename: string } } ? {} : Pick<Required<RrdtoolGraphInfo>, "image">;
-type HasImageInfo<T extends RrdToolGraphOptions> = T extends { output: { returnStringFormat: string } } ? Pick<Required<RrdtoolGraphInfo>, "image_info"> : {};
-type HasHW<T extends RrdToolGraphOptions> = T extends { verbose: true } ? Pick<Required<RrdtoolGraphInfo>, "image_width" | "image_height"> : T extends { output: { returnStringFormat: string } } ? {} : Pick<Required<RrdtoolGraphInfo>, "image_width" | "image_height">;
+type HasImage<T extends RrdToolGraphOptions> = T extends { filename: string } ? {} : Pick<Required<RrdtoolGraphInfo>, "image">;
+type HasImageInfo<T extends RrdToolGraphOptions> = T extends { imageInfoFormat: string } ? Pick<Required<RrdtoolGraphInfo>, "image_info"> : {};
+type HasHW<T extends RrdToolGraphOptions> = T extends { verbose: true } ? Pick<Required<RrdtoolGraphInfo>, "image_width" | "image_height"> : T extends { imageInfoFormat: string } ? {} : Pick<Required<RrdtoolGraphInfo>, "image_width" | "image_height">;
 type Print = Pick<RrdtoolGraphInfo, "print">; // XXX: Is actually known
 type GPrint = Pick<RrdtoolGraphInfo, "legend" | "coords">; // XXX: Is actually known
 type Rest = Omit<RrdtoolGraphInfo, "image" | "image_info" | "image_width" | "image_height" | "print" | "legend" | "coords">;
@@ -64,6 +64,7 @@ export const parse = (str: string): Info => {
     if (str.startsWith('"') && str.endsWith('"') && str.length > 1) {
       return str.slice(1, str.length - 1);
     }
+    // XXX: Allow null values?
     return Number(str);
   };
 

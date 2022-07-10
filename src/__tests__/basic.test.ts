@@ -109,7 +109,7 @@ describe("tests on temporary databases", () => {
   test("update with default timestamp", async () => {
     const t = rrdtool.now();
 
-    const db = await rrdtool.create < { test: number }>(p, [
+    const db = await rrdtool.create <{ test: number }>(p, [
       "DS:test:GAUGE:1:0:100",
       "RRA:AVERAGE:0.99:1:10",
     ], { step: 1 });

@@ -153,16 +153,18 @@ export interface RrdToolCreateOptions {
 
 type AxisFormatter = "numeric" | "timestamp" | "duration";
 
+// The graph() return type changes based on the first three top level properties
 export interface RrdToolGraphOptions {
+  filename?: string; // XXX: Rename to path or just name?
+  imageInfoFormat?: string; // XXX: printfstr
   verbose?: boolean;
-  output?: {
-    filename?: string;
+  image?: {
     width?: number;
     height?: number;
     onlyGraph?: boolean;
     fullSizeMode?: boolean;
     lazy?: boolean;
-    returnStringFormat?: string; // XXX: printfstr
+    backgroundColor?: Color;
     format?: "PNG" | "SVG" | "EPS" | "PDF" | "XML" | "XMLENUM" | "JSON" | "JSONTIME" | "CSV" | "TSV" | "SSV";
     interlaced?: boolean;
   };
@@ -236,8 +238,7 @@ export interface RrdToolGraphOptions {
     text: string;
     font?: Font;
   };
-  graph?: { // XXX: Not the best fit
-    backgroundColor?: Color;
+  graph?: {
     canvasColor?: Color;
     renderMode?: "normal" | "mono";
     slopeMode?: boolean;
