@@ -249,7 +249,7 @@ const graph = async (definitions: string[], o: RrdToolGraphOptions): Promise<str
   opts.flag("--use-nan-for-all-missing-data", o.graph?.useNanForMissingData);
 
   return exec([
-     "graph",
+    o.verbose ? "graphv" : "graph",
     o.output?.filename || "-",
     ...opts.res,
     ...definitions,

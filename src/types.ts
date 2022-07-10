@@ -133,6 +133,7 @@ export interface RrdToolCreateOptions {
 type AxisFormatter = "numeric" | "timestamp" | "duration";
 
 export interface RrdToolGraphOptions {
+  verbose?: boolean;
   output?: {
     filename?: string;
     width?: number;
