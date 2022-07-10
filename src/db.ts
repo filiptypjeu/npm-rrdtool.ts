@@ -1,7 +1,7 @@
 import proc from "./proc";
 import Queue from "queue";
 import EventEmitter from "events";
-import { ConsolidationFunction, RrdtoolData, RrdtoolDatapoint, RrdToolFetchOptions, RrdToolGraphOptions, RrdtoolInfo, RrdToolUpdateOptions } from "./types";
+import { ConsolidationFunction, RrdtoolData, RrdtoolDatapoint, RrdToolFetchOptions, RrdtoolInfo, RrdToolUpdateOptions } from "./types";
 
 export class RrdtoolDatabase<D extends RrdtoolData> extends EventEmitter {
   private m_queue: Queue;
@@ -24,10 +24,6 @@ export class RrdtoolDatabase<D extends RrdtoolData> extends EventEmitter {
 
   public async fetch(cf: ConsolidationFunction, options?: RrdToolFetchOptions): Promise<RrdtoolDatapoint<D>[]> {
     return this._addToQueue(() => proc.fetch(this.filename, cf, options || {}));
-  }
-
-  public async graph(definitions: string[], options?: RrdToolGraphOptions): Promise<string> {
-    return this._addToQueue(() => proc.graph(definitions, options || {}));
   }
 
   public async info(): Promise<RrdtoolInfo<D>> {

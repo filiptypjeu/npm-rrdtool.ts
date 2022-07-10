@@ -112,4 +112,17 @@ describe("tests on static database", () => {
     expect.assertions(1);
     return expect(db.update({ test: 123 }, { timestamp: start + 5 })).rejects.toBeTruthy();
   });
+
+  test("graph no filename", async () => {
+    const data = await rrdtool.graph([`DEF:simple=${p}:test:AVERAGE`, "LINE2:simple#FF0000"]);
+    expect(data).toContain("PNG");
+  });
+
+  test("graph verbose no filename", async () => {
+    const data = await rrdtool.graph([`DEF:simple=${p}:test:AVERAGE`, "LINE2:simple#FF0000"], {
+      verbose: true,
+    });
+    expect(data).toContain("PNG");
+    expect(data).toContain("image = BLOB_SIZE:");
+  });
 });
