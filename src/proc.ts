@@ -1,6 +1,6 @@
 import child_process from "child_process";
 import { ConsolidationFunction, RrdToolCreateOptions, RrdtoolData, RrdtoolDatapoint, RrdtoolDefinition, RrdToolFetchOptions, RrdToolGraphOptions, RrdtoolInfo, RrdToolUpdateOptions } from "./types";
-import { now, parseInfo } from "./util";
+import { now, parse } from "./util";
 
 type Argument = string | number;
 class RrdtoolError extends Error {
@@ -259,7 +259,20 @@ const graph = async (definitions: string[], o: RrdToolGraphOptions): Promise<str
 const info = async (filename: string): Promise<RrdtoolInfo<any>> => {
   // XXX: --noflush?
   const str = await exec(["info", filename]);
-  return parseInfo(str);
+
+  interface RrdtoolInfoTemporary extends Omit<RrdtoolInfo, "ds"> {
+    ds: { [key: string]: Omit<RrdtoolInfo["ds"][number], "name"> } | undefined;
+  }
+  const info = parse(str) as unknown as RrdtoolInfoTemporary;
+
+  // Change data sources into an array
+  const ds = info.ds || {};
+  const result: RrdtoolInfo = {
+    ...info,
+    ds: [...Object.keys(ds).map(k => ({ name: k, ...ds[k] }))],
+  };
+
+  return result;
 };
 
 const last = async (filename: string): Promise<number> => {

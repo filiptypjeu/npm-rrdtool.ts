@@ -1,8 +1,8 @@
-import { parseInfo } from "../util";
+import { parse } from "../util";
 
 test("parse info string", () => {
   expect(
-    parseInfo(`
+    parse(`
         filename = "random.rrd"
         rrd_version = "0001"
         step = 300
@@ -35,9 +35,8 @@ test("parse info string", () => {
     step: 300,
     last_update: 955892996,
     header_size: 2872,
-    ds: [
-      {
-        name: "a",
+    ds: {
+      a: {
         type: "GAUGE",
         minimal_heartbeat: 600,
         min: NaN,
@@ -46,8 +45,7 @@ test("parse info string", () => {
         value: 2.1824421548e4,
         unknown_sec: 0,
       },
-      {
-        name: "b",
+      b: {
         type: "GAUGE",
         minimal_heartbeat: 600,
         min: NaN,
@@ -56,7 +54,7 @@ test("parse info string", () => {
         value: 3.9620838224e3,
         unknown_sec: 0,
       },
-    ],
+    },
     rra: [
       {
         cf: "AVERAGE",

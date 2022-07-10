@@ -1,7 +1,7 @@
 import merge from "lodash/merge";
 import { RrdtoolDatabase } from "./db";
 import proc from "./proc";
-import { RrdToolCreateOptions, RrdtoolData, RrdtoolDefinition, RrdToolGraphOptions, RrdtoolInfo } from "./types";
+import { RrdToolCreateOptions, RrdtoolData, RrdtoolDefinition, RrdToolGraphOptions } from "./types";
 import fs from "fs";
 
 export const now = () => {
@@ -28,9 +28,11 @@ export const graph = async (definitions: string[], options?: RrdToolGraphOptions
   return proc.graph(definitions, options || {});
 }
 
-type Value = number | string | null;
-
-export const parseInfo = (str: string): RrdtoolInfo => {
+type Value = number | string;
+interface Info {
+  [key: string]: Value | Info | Value[] | Info[] | undefined;
+}
+export const parse = (str: string): Info => {
   const obj = (props: string[], value: Value): any => {
     if (props.length === 0) return value;
 
@@ -53,11 +55,10 @@ export const parseInfo = (str: string): RrdtoolInfo => {
     if (str.startsWith('"') && str.endsWith('"') && str.length > 1) {
       return str.slice(1, str.length - 1);
     }
-    if (str.toLowerCase() === "null") return null;
     return Number(str);
   };
 
-  let info: any = { ds: [], rra: [] };
+  let info: Info = {};
   const re = /([\w\[\]\.]+) =(.+)/g;
   str.replace(re, (_: string, name: string, value: string) => {
     const v = getValue(value.trim());
@@ -67,7 +68,5 @@ export const parseInfo = (str: string): RrdtoolInfo => {
     return "";
   });
 
-  // Change data sources into an array
-  info["ds"] = [...Object.keys(info["ds"])].map(k => ({ name: k, ...info["ds"][k] }));
   return info;
 };
