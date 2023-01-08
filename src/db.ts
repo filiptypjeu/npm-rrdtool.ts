@@ -1,13 +1,11 @@
 import proc from "./proc";
 import Queue from "queue";
-import EventEmitter from "events";
 import { ConsolidationFunction, RrdtoolData, RrdtoolDatapoint, RrdToolFetchOptions, RrdtoolInfo, RrdToolUpdateOptions } from "./types";
 
-export class RrdtoolDatabase<D extends RrdtoolData> extends EventEmitter {
+export class RrdtoolDatabase<D extends RrdtoolData> {
   private m_queue: Queue;
 
   constructor(public readonly filename: string) {
-    super();
     this.m_queue = new Queue({ concurrency: 1, autostart: true });
   }
 
